@@ -1,0 +1,10 @@
+{
+  "name": "codereviewproject",
+  "version": "1.0.0",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "csharp": {
+    "rules": [
+      {
+        "id": "CS001",
+        "type": "forbidden",
+        "pattern": "Console.WriteLine",
+        "message": "Avoid Console.WriteLine in production code.",
+        "severity": "error"
+      }
+    ]
+  },
+  "javascript": {
+    "eslintOverride": {
+      "rules": {
+        "no-console": "error",
+        "camelcase": "warn"
+      }
+    }
+  }
+}
