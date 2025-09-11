@@ -1,0 +1,64 @@
+# Azure DevOps Pipeline to fetch Code Review Bot from GitHub
+# Place this YAML in your target repo to use the bot without copying code
+
+trigger: none
+pr:
+  branches:
+    include:
+      - "*"
+
+resources:
+  repositories:
+    - repository: codeReviewBot
+      type: github
+      name: har9421/CodeReviewProject
+      ref: main
+      endpoint: GitHub # Replace with your GitHub service connection name
+
+jobs:
+  - job: CodeReview
+    pool:
+      vmImage: "ubuntu-latest"
+    steps:
+      - checkout: self
+        persistCredentials: true
+        clean: true
+
+      - checkout: codeReviewBot
+        persistCredentials: true
+        clean: true
+        path: review-bot
+
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "18.x"
+
+      - script: npm ci
+        workingDirectory: $(Build.SourcesDirectory)/review-bot
+        displayName: "Install NPM packages for bot"
+
+      - task: UseDotNet@2
+        inputs:
+          packageType: sdk
+          version: "8.0.x"
+
+      - script: dotnet build ./src/CodeReviewRunner -c Release
+        workingDirectory: $(Build.SourcesDirectory)/review-bot
+        displayName: "Build Code Review Runner"
+
+      - script: dotnet test ./tests/CodeReviewRunner.Tests -c Release --no-build
+        workingDirectory: $(Build.SourcesDirectory)/review-bot
+        displayName: "Run bot unit tests"
+
+      - script: |
+          dotnet run --project ./src/CodeReviewRunner \
+            "$(Build.SourcesDirectory)" \
+            "$(CODING_STANDARDS_URL:-$(Build.SourcesDirectory)/review-bot/coding-standards.sample.json)" \
+            "$(System.PullRequest.PullRequestId)" \
+            "$(System.CollectionUri)" \
+            "$(System.TeamProject)" \
+            "$(Build.Repository.ID)"
+        workingDirectory: $(Build.SourcesDirectory)/review-bot
+        env:
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        displayName: "Run Code Review Bot"
