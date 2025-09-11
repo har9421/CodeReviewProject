@@ -34,7 +34,7 @@ jobs:
       - script: |
           dotnet run --project ./src/CodeReviewRunner \
             $(Build.SourcesDirectory) \
-            $(CODING_STANDARDS_URL) \
+            $(CODING_STANDARDS_URL:-$(Build.SourcesDirectory)/coding-standards.sample.json) \
             $(System.PullRequest.PullRequestId) \
             $(System.CollectionUri) \
             $(System.TeamProject) \
