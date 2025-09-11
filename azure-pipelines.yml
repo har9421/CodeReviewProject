@@ -1,0 +1,44 @@
+trigger: none
+pr:
+  branches:
+    include:
+      - "*"
+
+jobs:
+  - job: CodeReview
+    pool:
+      vmImage: "ubuntu-latest"
+    steps:
+      - checkout: self
+        persistCredentials: true
+        clean: true
+
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "18.x"
+
+      - script: npm ci
+        displayName: "Install NPM packages"
+
+      - task: UseDotNet@2
+        inputs:
+          packageType: sdk
+          version: "8.0.x"
+
+      - script: dotnet build ./src/CodeReviewRunner -c Release
+        displayName: "Build Code Review Runner"
+
+      - script: dotnet test ./tests/CodeReviewRunner.Tests -c Release --no-build
+        displayName: "Run unit tests"
+
+      - script: |
+          dotnet run --project ./src/CodeReviewRunner \
+            $(Build.SourcesDirectory) \
+            $(CODING_STANDARDS_URL) \
+            $(System.PullRequest.PullRequestId) \
+            $(System.CollectionUri) \
+            $(System.TeamProject) \
+            $(Build.Repository.ID)
+        env:
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        displayName: "Run Code Review"
