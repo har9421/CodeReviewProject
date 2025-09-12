@@ -32,7 +32,7 @@ class Program
 
         var ado = new AzureDevOpsClient(pat!);
         await ado.PostCommentsAsync(orgUrl, project, repoId, prId, repoPath, issues);
-        await ado.PostSummaryAsync(orgUrl, project, repoId, prId, issues);
+        //  await ado.PostSummaryAsync(orgUrl, project, repoId, prId, issues);
 
         return issues.Any(i => i.Severity == "error") ? 1 : 0;
     }
