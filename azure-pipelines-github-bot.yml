@@ -30,13 +30,22 @@ jobs:
         # Place under the same 's' sources dir so $(Build.SourcesDirectory)/review-bot exists
         path: s/review-bot
 
+      - script: |
+          echo "Build.SourcesDirectory=$(Build.SourcesDirectory)"
+          echo "Pipeline.Workspace=$(Pipeline.Workspace)"
+          echo "Listing $(Pipeline.Workspace)" && ls -la $(Pipeline.Workspace) || true
+          echo "Listing $(Build.SourcesDirectory)" && ls -la $(Build.SourcesDirectory) || true
+          echo "Listing $(Pipeline.Workspace)/s" && ls -la $(Pipeline.Workspace)/s || true
+          echo "Listing $(Pipeline.Workspace)/s/review-bot" && ls -la $(Pipeline.Workspace)/s/review-bot || true
+        displayName: "Diagnostics: show workspace layout"
+
       - task: NodeTool@0
         inputs:
           versionSpec: "18.x"
 
-      # - script: npm ci
-      #   workingDirectory: $(Build.SourcesDirectory)/review-bot
-      #   displayName: "Install NPM packages for bot"
+      # No local NPM install is required because the bot runs ESLint via npx with a pinned version
+      - script: echo "Skipping npm install; using npx eslint@9"
+        displayName: "Skip NPM install"
 
       - task: UseDotNet@2
         inputs:
@@ -44,22 +53,24 @@ jobs:
           version: "8.0.x"
 
       - script: dotnet build ./src/CodeReviewRunner -c Release
-        workingDirectory: $(Build.SourcesDirectory)/review-bot
+        workingDirectory: $(Pipeline.Workspace)/s/review-bot
         displayName: "Build Code Review Runner"
 
       - script: dotnet test ./tests/CodeReviewRunner.Tests -c Release --no-build
-        workingDirectory: $(Build.SourcesDirectory)/review-bot
+        workingDirectory: $(Pipeline.Workspace)/s/review-bot
         displayName: "Run bot unit tests"
 
       - script: |
+          RULES="${CODING_STANDARDS_URL:-$(Pipeline.Workspace)/s/review-bot/coding-standards.sample.json}"
+          echo "Using rules: $RULES"
           dotnet run --project ./src/CodeReviewRunner \
             "$(Build.SourcesDirectory)" \
-            "$(CODING_STANDARDS_URL:-$(Build.SourcesDirectory)/review-bot/coding-standards.sample.json)" \
+            "$RULES" \
             "$(System.PullRequest.PullRequestId)" \
             "$(System.CollectionUri)" \
             "$(System.TeamProject)" \
             "$(Build.Repository.ID)"
-        workingDirectory: $(Build.SourcesDirectory)/review-bot
+        workingDirectory: $(Pipeline.Workspace)/s/review-bot
         env:
           SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         displayName: "Run Code Review Bot"
