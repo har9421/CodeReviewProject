@@ -13,7 +13,7 @@ resources:
       type: github
       name: har9421/CodeReviewProject
       ref: main
-      endpoint: GitHub # Replace with your GitHub service connection name
+      endpoint: GitHub # Update this to match your service connection name
 
 jobs:
   - job: CodeReview
