@@ -46,9 +46,15 @@ class Program
             Console.WriteLine("No changed files detected in PR. Skipping analysis.");
             return 0;
         }
+        Console.WriteLine($"Changed files detected: {changedFiles.Count}");
+        foreach (var f in changedFiles.Take(50)) Console.WriteLine($" - {f}");
 
-        issues.AddRange(new CSharpAnalyzer().Analyze(repoPath, rules, changedFiles));
-        issues.AddRange(new ReactAnalyzer().Analyze(repoPath, rules, changedFiles));
+        var csIssues = new CSharpAnalyzer().Analyze(repoPath, rules, changedFiles);
+        Console.WriteLine($"C# issues: {csIssues.Count}");
+        issues.AddRange(csIssues);
+        var jsIssues = new ReactAnalyzer().Analyze(repoPath, rules, changedFiles);
+        Console.WriteLine($"JS/TS issues: {jsIssues.Count}");
+        issues.AddRange(jsIssues);
 
         await ado.PostCommentsAsync(orgUrl, project, repoId, prId, repoPath, issues, changedFiles);
         //  await ado.PostSummaryAsync(orgUrl, project, repoId, prId, issues);

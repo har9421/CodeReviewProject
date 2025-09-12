@@ -148,7 +148,10 @@ public class AzureDevOpsClient
             {
                 var normalizedIssuePath = NormalizeForCompare(repoPath, Path.Combine(repoPath, relativePath.TrimStart('/')));
                 if (!allowedSet.Contains(normalizedIssuePath))
+                {
+                    Console.WriteLine($"Skip commenting on {relativePath} (not in PR changed files)");
                     continue;
+                }
             }
 
             var body = new
@@ -167,7 +170,7 @@ public class AzureDevOpsClient
 
             var json = System.Text.Json.JsonSerializer.Serialize(body);
             var res = await _http.PostAsync(url, new StringContent(json, System.Text.Encoding.UTF8, "application/json"));
-            Console.WriteLine($"Posted comment: {res.StatusCode}");
+            Console.WriteLine($"Post comment on {relativePath} line {issue.Line}: {res.StatusCode}");
         }
     }
 
