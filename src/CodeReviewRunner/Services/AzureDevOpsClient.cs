@@ -46,36 +46,84 @@ public class AzureDevOpsClient
         var json = await res.Content.ReadAsStringAsync();
 
         var files = new List<string>();
-        using var doc = System.Text.Json.JsonDocument.Parse(json);
-        if (doc.RootElement.TryGetProperty("changes", out var changes))
+        using (var doc = System.Text.Json.JsonDocument.Parse(json))
         {
-            foreach (var change in changes.EnumerateArray())
+            // Some endpoints return 'changes', others 'value'
+            if (!doc.RootElement.TryGetProperty("changes", out var changes) && !doc.RootElement.TryGetProperty("value", out changes))
             {
-                if (change.TryGetProperty("changeType", out var changeTypeEl))
+                changes = default;
+            }
+            if (changes.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var change in changes.EnumerateArray())
                 {
-                    var changeType = changeTypeEl.GetString();
-                    if (string.Equals(changeType, "delete", StringComparison.OrdinalIgnoreCase))
+                    if (change.TryGetProperty("changeType", out var changeTypeEl))
+                    {
+                        var changeType = changeTypeEl.GetString();
+                        if (string.Equals(changeType, "delete", StringComparison.OrdinalIgnoreCase))
+                            continue;
+                    }
+
+                    string? path = null;
+                    if (change.TryGetProperty("item", out var item) && item.TryGetProperty("path", out var pathEl))
+                    {
+                        path = pathEl.GetString();
+                    }
+                    if (string.IsNullOrWhiteSpace(path) && change.TryGetProperty("originalPath", out var origPathEl))
+                    {
+                        path = origPathEl.GetString();
+                    }
+                    if (string.IsNullOrWhiteSpace(path))
                         continue;
+                    var combined = Path.Combine(repoPath, path.TrimStart('/', '\\'));
+                    files.Add(combined);
                 }
-
-                string? path = null;
-                if (change.TryGetProperty("item", out var item) && item.TryGetProperty("path", out var pathEl))
-                {
-                    path = pathEl.GetString();
-                }
-                // For renames, sometimes originalPath exists
-                if (string.IsNullOrWhiteSpace(path) && change.TryGetProperty("originalPath", out var origPathEl))
-                {
-                    path = origPathEl.GetString();
-                }
-
-                if (string.IsNullOrWhiteSpace(path))
-                    continue;
-
-                var combined = Path.Combine(repoPath, path.TrimStart('/', '\\'));
-                files.Add(combined);
             }
         }
+
+        if (files.Count == 0)
+        {
+            // Fallback via commits aggregation
+            var commitsUrl = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/commits?api-version=7.1-preview.1";
+            var commitsRes = await _http.GetAsync(commitsUrl);
+            commitsRes.EnsureSuccessStatusCode();
+            var commitsJson = await commitsRes.Content.ReadAsStringAsync();
+            using var commitsDoc = System.Text.Json.JsonDocument.Parse(commitsJson);
+            if (commitsDoc.RootElement.TryGetProperty("value", out var commitsArr))
+            {
+                foreach (var commit in commitsArr.EnumerateArray())
+                {
+                    var commitId = commit.TryGetProperty("commitId", out var idEl) ? idEl.GetString() : null;
+                    if (string.IsNullOrWhiteSpace(commitId)) continue;
+                    var chUrl = $"{org}/{project}/_apis/git/repositories/{repoId}/commits/{commitId}/changes?api-version=7.1-preview.1";
+                    var chRes = await _http.GetAsync(chUrl);
+                    if (!chRes.IsSuccessStatusCode) continue;
+                    var chJson = await chRes.Content.ReadAsStringAsync();
+                    using var chDoc = System.Text.Json.JsonDocument.Parse(chJson);
+                    if (chDoc.RootElement.TryGetProperty("changes", out var chChanges) || chDoc.RootElement.TryGetProperty("value", out chChanges))
+                    {
+                        foreach (var change in chChanges.EnumerateArray())
+                        {
+                            if (change.TryGetProperty("changeType", out var changeTypeEl))
+                            {
+                                var changeType = changeTypeEl.GetString();
+                                if (string.Equals(changeType, "delete", StringComparison.OrdinalIgnoreCase))
+                                    continue;
+                            }
+                            if (change.TryGetProperty("item", out var item) && item.TryGetProperty("path", out var pathEl))
+                            {
+                                var path = pathEl.GetString();
+                                if (!string.IsNullOrWhiteSpace(path))
+                                {
+                                    files.Add(Path.Combine(repoPath, path.TrimStart('/', '\\')));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         return files.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 

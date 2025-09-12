@@ -36,14 +36,21 @@ class Program
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Failed to fetch changed files; falling back to full repo scan. {ex.Message}");
+            Console.Error.WriteLine($"Failed to fetch changed files. {ex.Message}");
             changedFiles = new List<string>();
         }
 
-        issues.AddRange(new CSharpAnalyzer().Analyze(repoPath, rules, changedFiles.Any() ? changedFiles : null));
-        issues.AddRange(new ReactAnalyzer().Analyze(repoPath, rules, changedFiles.Any() ? changedFiles : null));
+        // Never analyze the whole repo if we failed to fetch PR changes. If none found, exit cleanly.
+        if (!changedFiles.Any())
+        {
+            Console.WriteLine("No changed files detected in PR. Skipping analysis.");
+            return 0;
+        }
 
-        await ado.PostCommentsAsync(orgUrl, project, repoId, prId, repoPath, issues, changedFiles.Any() ? changedFiles : null);
+        issues.AddRange(new CSharpAnalyzer().Analyze(repoPath, rules, changedFiles));
+        issues.AddRange(new ReactAnalyzer().Analyze(repoPath, rules, changedFiles));
+
+        await ado.PostCommentsAsync(orgUrl, project, repoId, prId, repoPath, issues, changedFiles);
         //  await ado.PostSummaryAsync(orgUrl, project, repoId, prId, issues);
 
         return issues.Any(i => i.Severity == "error") ? 1 : 0;
