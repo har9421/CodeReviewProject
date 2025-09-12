@@ -27,7 +27,8 @@ jobs:
       - checkout: codeReviewBot
         persistCredentials: true
         clean: true
-        path: review-bot
+        # Place under the same 's' sources dir so $(Build.SourcesDirectory)/review-bot exists
+        path: s/review-bot
 
       - task: NodeTool@0
         inputs:
