@@ -17,3 +17,4 @@ A custom **code review automation tool** for:
 1. Set up pipeline with `azure-pipelines.yml`
 2. Provide `CODING_STANDARDS_URL` in pipeline variables
 3. Open a PR → pipeline runs → comments posted inline
+4. Ensure OAuth token is enabled for PR comments
