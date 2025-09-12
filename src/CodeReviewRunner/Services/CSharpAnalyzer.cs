@@ -5,19 +5,27 @@ namespace CodeReviewRunner.Services;
 
 public class CSharpAnalyzer
 {
-    public List<CodeIssue> Analyze(string repoPath, JObject rules)
+    public List<CodeIssue> Analyze(string repoPath, JObject rules, IEnumerable<string>? limitToFiles = null)
     {
         var issues = new List<CodeIssue>();
-        var csFiles = Directory.EnumerateFiles(
-            repoPath,
-            "*.cs",
-            new EnumerationOptions
-            {
-                RecurseSubdirectories = true,
-                IgnoreInaccessible = true,
-                ReturnSpecialDirectories = false
-            }
-        );
+        IEnumerable<string> csFiles;
+        if (limitToFiles != null)
+        {
+            csFiles = limitToFiles.Where(p => p.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) && File.Exists(p));
+        }
+        else
+        {
+            csFiles = Directory.EnumerateFiles(
+                repoPath,
+                "*.cs",
+                new EnumerationOptions
+                {
+                    RecurseSubdirectories = true,
+                    IgnoreInaccessible = true,
+                    ReturnSpecialDirectories = false
+                }
+            );
+        }
 
         foreach (var file in csFiles)
         {

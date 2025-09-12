@@ -6,26 +6,37 @@ namespace CodeReviewRunner.Services;
 
 public class ReactAnalyzer
 {
-    public List<CodeIssue> Analyze(string repoPath, JObject rules)
+    public List<CodeIssue> Analyze(string repoPath, JObject rules, IEnumerable<string>? limitToFiles = null)
     {
         var results = new List<CodeIssue>();
 
-        // Skip ESLint when the repository has no JS/TS files
-        var hasJsTs = Directory.EnumerateFiles(
-            repoPath,
-            "*",
-            new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true }
-        ).Any(p => p.EndsWith(".js", StringComparison.OrdinalIgnoreCase)
+        IEnumerable<string> targetFiles;
+        if (limitToFiles != null)
+        {
+            targetFiles = limitToFiles.Where(p =>
+                (p.EndsWith(".js", StringComparison.OrdinalIgnoreCase)
                  || p.EndsWith(".jsx", StringComparison.OrdinalIgnoreCase)
                  || p.EndsWith(".ts", StringComparison.OrdinalIgnoreCase)
-                 || p.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase));
-        if (!hasJsTs)
+                 || p.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase)) && File.Exists(p));
+        }
+        else
+        {
+            targetFiles = Directory.EnumerateFiles(
+                repoPath,
+                "*",
+                new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true }
+            ).Where(p => p.EndsWith(".js", StringComparison.OrdinalIgnoreCase)
+                     || p.EndsWith(".jsx", StringComparison.OrdinalIgnoreCase)
+                     || p.EndsWith(".ts", StringComparison.OrdinalIgnoreCase)
+                     || p.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase));
+        }
+        if (!targetFiles.Any())
             return results;
         var configPath = Path.Combine(Path.GetTempPath(), "eslint-config.json");
         File.WriteAllText(configPath, rules["javascript"]?["eslintOverride"]?.ToString() ?? "{}");
 
-        // Correct npx syntax: invoke eslint@9 binary with arguments; do not pass an extra 'eslint' pattern
-        var psi = new ProcessStartInfo("npx", $"--yes eslint@9 -f json -c \"{configPath}\" .")
+        var filesArg = string.Join(" ", targetFiles.Select(f => $"\"{f}\""));
+        var psi = new ProcessStartInfo("npx", $"--yes eslint@9 -f json -c \"{configPath}\" {filesArg}")
         {
             WorkingDirectory = repoPath,
             RedirectStandardOutput = true,
@@ -44,10 +55,10 @@ public class ReactAnalyzer
             return results;
         }
 
-        var arr = JArray.Parse(output);
+        var arr = string.IsNullOrWhiteSpace(output) ? new JArray() : JArray.Parse(output);
         foreach (var file in arr)
         {
-            var filePath = (string)file["filePath"];
+            var filePath = (string?)file["filePath"];
             foreach (var msg in file["messages"]!)
             {
                 results.Add(new CodeIssue
