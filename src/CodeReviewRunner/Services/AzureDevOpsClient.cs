@@ -16,7 +16,31 @@ public class AzureDevOpsClient
 
     public async Task<List<string>> GetChangedFilesAsync(string org, string project, string repoId, string prId, string repoPath)
     {
-        var url = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.1-preview.1";
+        // Get latest iteration id
+        var iterationsUrl = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/iterations?api-version=7.1-preview.1";
+        var iterRes = await _http.GetAsync(iterationsUrl);
+        iterRes.EnsureSuccessStatusCode();
+        var iterJson = await iterRes.Content.ReadAsStringAsync();
+
+        int latestIterationId = 0;
+        using (var iterDoc = System.Text.Json.JsonDocument.Parse(iterJson))
+        {
+            if (iterDoc.RootElement.TryGetProperty("value", out var iterations))
+            {
+                foreach (var it in iterations.EnumerateArray())
+                {
+                    if (it.TryGetProperty("id", out var idEl))
+                    {
+                        var id = idEl.GetInt32();
+                        if (id > latestIterationId) latestIterationId = id;
+                    }
+                }
+            }
+        }
+        if (latestIterationId == 0)
+            return new List<string>();
+
+        var url = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/iterations/{latestIterationId}/changes?api-version=7.1-preview.1";
         var res = await _http.GetAsync(url);
         res.EnsureSuccessStatusCode();
         var json = await res.Content.ReadAsStringAsync();
@@ -27,28 +51,41 @@ public class AzureDevOpsClient
         {
             foreach (var change in changes.EnumerateArray())
             {
-                // Exclude deletions
-                if (change.TryGetProperty("changeType", out var changeTypeEl) && string.Equals(changeTypeEl.GetString(), "delete", StringComparison.OrdinalIgnoreCase))
-                    continue;
+                if (change.TryGetProperty("changeType", out var changeTypeEl))
+                {
+                    var changeType = changeTypeEl.GetString();
+                    if (string.Equals(changeType, "delete", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                }
 
+                string? path = null;
                 if (change.TryGetProperty("item", out var item) && item.TryGetProperty("path", out var pathEl))
                 {
-                    var relativePath = pathEl.GetString() ?? string.Empty;
-                    if (string.IsNullOrWhiteSpace(relativePath))
-                        continue;
-
-                    // API paths are like "/src/Project/File.cs"; make absolute on disk
-                    var combined = Path.Combine(repoPath, relativePath.TrimStart('/', '\\'));
-                    files.Add(combined);
+                    path = pathEl.GetString();
                 }
+                // For renames, sometimes originalPath exists
+                if (string.IsNullOrWhiteSpace(path) && change.TryGetProperty("originalPath", out var origPathEl))
+                {
+                    path = origPathEl.GetString();
+                }
+
+                if (string.IsNullOrWhiteSpace(path))
+                    continue;
+
+                var combined = Path.Combine(repoPath, path.TrimStart('/', '\\'));
+                files.Add(combined);
             }
         }
-        return files;
+        return files.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    public async Task PostCommentsAsync(string org, string project, string repoId, string prId, string repoPath, List<CodeIssue> issues)
+    public async Task PostCommentsAsync(string org, string project, string repoId, string prId, string repoPath, List<CodeIssue> issues, IEnumerable<string>? allowedFilePaths = null)
     {
         var url = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/threads?api-version=6.0";
+
+        var allowedSet = allowedFilePaths != null
+            ? new HashSet<string>(allowedFilePaths.Select(p => NormalizeForCompare(repoPath, p)), StringComparer.OrdinalIgnoreCase)
+            : null;
 
         foreach (var issue in issues)
         {
@@ -58,6 +95,13 @@ public class AzureDevOpsClient
                 : Path.GetRelativePath(repoPath, issue.FilePath).Replace('\\', '/');
             if (!relativePath.StartsWith('/'))
                 relativePath = "/" + relativePath;
+
+            if (allowedSet != null)
+            {
+                var normalizedIssuePath = NormalizeForCompare(repoPath, Path.Combine(repoPath, relativePath.TrimStart('/')));
+                if (!allowedSet.Contains(normalizedIssuePath))
+                    continue;
+            }
 
             var body = new
             {
@@ -105,5 +149,15 @@ public class AzureDevOpsClient
         var json = System.Text.Json.JsonSerializer.Serialize(body);
         var res = await _http.PostAsync(url, new StringContent(json, System.Text.Encoding.UTF8, "application/json"));
         Console.WriteLine($"Posted summary: {res.StatusCode}");
+    }
+    private static string NormalizeForCompare(string repoPath, string fullPath)
+    {
+        var normalized = fullPath;
+        if (Path.DirectorySeparatorChar == '\\')
+            normalized = normalized.Replace('/', '\\');
+        else
+            normalized = normalized.Replace('\\', '/');
+        var rel = Path.GetRelativePath(repoPath, normalized);
+        return rel.TrimStart('/', '\\');
     }
 }

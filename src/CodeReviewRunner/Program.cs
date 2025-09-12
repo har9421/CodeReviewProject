@@ -43,7 +43,7 @@ class Program
         issues.AddRange(new CSharpAnalyzer().Analyze(repoPath, rules, changedFiles.Any() ? changedFiles : null));
         issues.AddRange(new ReactAnalyzer().Analyze(repoPath, rules, changedFiles.Any() ? changedFiles : null));
 
-        await ado.PostCommentsAsync(orgUrl, project, repoId, prId, repoPath, issues);
+        await ado.PostCommentsAsync(orgUrl, project, repoId, prId, repoPath, issues, changedFiles.Any() ? changedFiles : null);
         //  await ado.PostSummaryAsync(orgUrl, project, repoId, prId, issues);
 
         return issues.Any(i => i.Severity == "error") ? 1 : 0;
