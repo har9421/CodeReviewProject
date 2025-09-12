@@ -2,772 +2,277 @@
   "version": "1.0",
   "csharp": {
     "rules": [
-    {
-      "id": "CS001",
-      "category": "PROJECT CODE REVIEW INSTRUCTIONS",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS002",
-      "category": "\ud83c\udff7\ufe0f Naming Conventions",
-      "type": "naming",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify incorrect naming for component names, interfaces, and type aliases; instruct to use PascalCase.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS003",
-      "category": "\ud83c\udff7\ufe0f Naming Conventions",
-      "type": "naming",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify incorrect naming for variables, functions, and methods; instruct to use camelCase.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS004",
-      "category": "\ud83c\udff7\ufe0f Naming Conventions",
-      "type": "naming",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify incorrect naming for public properties in C# classes except the lookup properties; instruct to use PascalCase.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS005",
-      "category": "\ud83c\udff7\ufe0f Naming Conventions",
-      "type": "naming",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify incorrect naming for parameters in C# methods; instruct to use camelCase.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS006",
-      "category": "\ud83c\udff7\ufe0f Naming Conventions",
-      "type": "naming",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify incorrect naming for method names in C#; instruct to use PascalCase.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS007",
-      "category": "\ud83c\udff7\ufe0f Naming Conventions",
-      "type": "naming",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS008",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify hard-coded values and instruct to use lookups or local constants.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS009",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing regions like `Declarations` (to group variables in class), `Private Methods` (to group private methods), `Public Methods` (to group public methods) in code and instruct to add them.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS010",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing line breaks after `#region` and before `#endregion` and instruct to add them.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS011",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing line breaks after `#endregion` when followed by a statement and instruct to add them.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS012",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify unused namespaces and instruct to remove them and sort the remaining ones.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS013",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify use of `for` loops when iterating lists/collections and instruct to use `foreach` instead.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS014",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing line breaks between imported namespace and class-level namespace and instruct to add one line break.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS015",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify if statements without curly braces even when the next line is a single statement and instruct to add curly braces.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS016",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify and instruct adding a line break after all method definitions when followed by another statement.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS017",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing line breaks before all `return` statements and instruct to add them.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS018",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing line breaks before the start of separate conditional statements and instruct to add them.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS019",
-      "category": "\ud83d\udccb General Project Guidelines",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS020",
-      "category": "\ud83d\udd20 Spacing issues",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify improper code indentation and instruct to use consistent tabs for each code block.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS021",
-      "category": "\ud83d\udd20 Spacing issues",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify inconsistent spacing around operators, parentheses, and braces and instruct to maintain consistency.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS022",
-      "category": "\ud83d\udd20 Spacing issues",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify mixed indentation styles and instruct to use 4-space indentation (or tab equivalent) consistently throughout all files.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS023",
-      "category": "\ud83d\udd20 Spacing issues",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS024",
-      "category": "\ud83c\udfe2 Controller and Business Logic",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify use of `FirstOrDefault()` to check if a record exists in DB and instruct to use `Exists()` instead.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS025",
-      "category": "\ud83c\udfe2 Controller and Business Logic",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify potential memory leaks and instruct to use `using` clause where applicable.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS026",
-      "category": "\ud83c\udfe2 Controller and Business Logic",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify use of `DateTime.Now` and instruct to replace with `DateTimeUtil.Now`.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS027",
-      "category": "\ud83c\udfe2 Controller and Business Logic",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify use of `String.Format` and instruct to replace with interpolated strings format ($\"{}\").",
-      "severity": "warning"
-    },
-    {
-      "id": "CS028",
-      "category": "\ud83c\udfe2 Controller and Business Logic",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify use of `Newtonsoft` and instruct to replace with System.Text.Json.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS029",
-      "category": "\ud83c\udfe2 Controller and Business Logic",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify use of `Count>0` and instruct to replace with `.Any()`.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS030",
-      "category": "\ud83c\udfd7\ufe0f Code Structure and Organization",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify files that handle multiple responsibilities and instruct to keep files focused on a single responsibility.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS031",
-      "category": "\ud83c\udfd7\ufe0f Code Structure and Organization",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify unrelated functions and properties scattered throughout code and instruct to group related functions and properties together.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS032",
-      "category": "\ud83c\udfd7\ufe0f Code Structure and Organization",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS033",
-      "category": "\ud83d\udcda Documentation",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing XML documentation for public methods in open files and instruct to include XML documentation for all public methods.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS034",
-      "category": "\ud83d\udcda Documentation",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify commented code and instruct to remove it.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS035",
-      "category": "\ud83d\udcda Documentation",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS036",
-      "category": "\ud83d\udee1\ufe0f Error Handling",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing try-catch blocks for expected exceptions and instruct to use try-catch blocks for expected exceptions.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS037",
-      "category": "\ud83d\udee1\ufe0f Error Handling",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify exceptions without proper logging and instruct to implement proper logging for exceptions.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS038",
-      "category": "\ud83d\udee1\ufe0f Error Handling",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify swallowed exceptions without logging and instruct to avoid swallowing exceptions without logging.",
-      "severity": "error"
-    },
-    {
-      "id": "CS039",
-      "category": "\ud83d\udee1\ufe0f Error Handling",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify generic or unclear error messages and instruct to return meaningful error messages to users.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS040",
-      "category": "\ud83d\udee1\ufe0f Error Handling",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS041",
-      "category": "\ud83d\ude80 Performance Considerations",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify excessive database calls and unoptimized queries and instruct to minimize database calls and optimize queries.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS042",
-      "category": "\ud83d\ude80 Performance Considerations",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify synchronous I/O operations and instruct to use `async/await` for I/O operations.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS043",
-      "category": "\ud83d\ude80 Performance Considerations",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify unnecessary object creation in loops and instruct to avoid unnecessary object creation in loops.",
-      "severity": "error"
-    },
-    {
-      "id": "CS044",
-      "category": "\ud83d\ude80 Performance Considerations",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS045",
-      "category": "\ud83d\udee0\ufe0f Tools and Automation",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify poorly formatted code sections and instruct to use (Ctrl+K, Ctrl+F) to format only selected code.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS046",
-      "category": "\ud83d\udee0\ufe0f Tools and Automation",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS047",
-      "category": "\ud83d\udeab Inline Comments",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify unnecessary inline comments (e.g., // or /* ... */) within code files and instruct NOT to add them unless absolutely necessary for clarification of complex logic.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS048",
-      "category": "\ud83d\udeab Inline Comments",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing XML documentation for public methods and classes, and instruct to use XML documentation for public methods and classes only.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS049",
-      "category": "\ud83d\udeab Inline Comments",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify unnecessary or redundant inline comments and instruct to remove them to keep code clean and maintainable.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS050",
-      "category": "\ud83d\udeab Inline Comments",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS051",
-      "category": "\ud83d\udcdd Additional Code Review Instructions",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing XML summary documentation for public methods and instruct to add XML summary documentation to every public method, including `<param>` tags for each parameter and a `<returns>` tag for the return value, if not already present.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS052",
-      "category": "\ud83d\udcdd Additional Code Review Instructions",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing `#region Declarations` section and instruct to create a `#region Declarations` section that contains all properties, variables, and the constructor. If this region does not exist, add it.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS053",
-      "category": "\ud83d\udcdd Additional Code Review Instructions",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing `#region Public Methods` section and instruct to create a `#region Public Methods` section that contains all public methods. If this region does not exist, add it.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS054",
-      "category": "\ud83d\udcdd Additional Code Review Instructions",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify business logic files missing `#region Operation Methods` section and instruct to add a `#region Operation Methods` section to group all methods decorated with `[OperationMethod]`. This region should appear after `#region Public Methods` and before `#region Private Methods` if present.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS055",
-      "category": "\ud83d\udcdd Additional Code Review Instructions",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing `#region Private Methods` section and instruct to create a `#region Private Methods` section that contains all private methods. If this region does not exist, add it.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS056",
-      "category": "\ud83d\udcdd Additional Code Review Instructions",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing blank lines around control statements and instruct to place a blank line before and after every `if`, `if-else`, `switch`, and loop statement, unless the statement is inside a block delimited by `{ }`.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS057",
-      "category": "\ud83d\udcdd Additional Code Review Instructions",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing blank lines before return statements and instruct to place a blank line before every `return` statement.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS058",
-      "category": "\ud83d\udcdd Additional Code Review Instructions",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing blank lines after `DbContext.SaveChanges();` statements and instruct to add a blank line unless the next line is a closing brace `}`.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS059",
-      "category": "\ud83d\udcdd Additional Code Review Instructions",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify unsorted `using` statements and instruct to sort all `using` statements alphabetically at the top of the file.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS060",
-      "category": "\ud83d\udcdd Additional Code Review Instructions",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS061",
-      "category": "\ud83d\udd27 Additional DTMB Comments",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify nested foreach loops and instruct to avoid nested foreach loops.",
-      "severity": "error"
-    },
-    {
-      "id": "CS062",
-      "category": "\ud83d\udd27 Additional DTMB Comments",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify SonarLint and SonarQube issues and instruct to address them.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS063",
-      "category": "\ud83d\udd27 Additional DTMB Comments",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify operation methods decorated with `[OperationMethod]` that use multiple arguments and instruct to convert to view model.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS064",
-      "category": "\ud83d\udd27 Additional DTMB Comments",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "",
-      "severity": "warning"
-    },
-    {
-      "id": "CS065",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify LINQ queries with multiple enumerations and instruct to use `.ToList()` or `.ToArray()` when appropriate.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS066",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify string concatenation in loops and instruct to use `StringBuilder` instead.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS067",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify blocking calls in async methods and instruct to use proper async patterns.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS068",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify magic numbers and strings and instruct to use named constants or enums.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS069",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify large methods (>50 lines) and instruct to break them into smaller, focused methods.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS070",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify deep nesting levels (>3) and instruct to refactor using early returns or guard clauses.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS071",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify duplicate code blocks and instruct to extract into reusable methods.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS072",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing input validation and instruct to add proper parameter validation.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS073",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify unused variables, methods, or properties and instruct to remove them.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS074",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify inappropriate use of static members and instruct to use dependency injection instead.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS075",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify SQL injection vulnerabilities and instruct to use parameterized queries.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS076",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify missing null checks and instruct to add null validation or use nullable reference types.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS077",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify sensitive information in logs and instruct to mask or remove it.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS078",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify hardcoded connection strings or secrets and instruct to use configuration.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS079",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify complex boolean expressions and instruct to extract into well-named variables or methods.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS080",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify unclear method purposes and instruct to improve method names and add documentation.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS081",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify inconsistent coding patterns across similar functionalities and instruct to standardize.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS082",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify opportunities to use pattern matching instead of traditional if-else chains.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS083",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify opportunities to use nullable reference types for better null safety.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS084",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify opportunities to use switch expressions for cleaner code.",
-      "severity": "warning"
-    },
-    {
-      "id": "CS085",
-      "category": "\ud83c\udfaf Common Comments - Performance, Quality, Best Practices & Maintainability",
-      "type": "style",
-      "pattern": "",
-      "applies_to": "",
-      "message": "Identify opportunities to use local functions instead of private methods when appropriate.",
-      "severity": "warning"
-    }
-  ]
+      {
+        "id": "CS001",
+        "category": "Naming Conventions",
+        "type": "style",
+        "pattern": "class|interface|enum|struct",
+        "applies_to": "type_declaration",
+        "message": "Type names should be in PascalCase.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS002",
+        "category": "Naming Conventions",
+        "type": "style",
+        "pattern": "method",
+        "applies_to": "method_declaration",
+        "message": "Method names should be in PascalCase.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS003",
+        "category": "Naming Conventions",
+        "type": "style",
+        "pattern": "variable",
+        "applies_to": "local_variable",
+        "message": "Local variables should be in camelCase.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS004",
+        "category": "Naming Conventions",
+        "type": "style",
+        "pattern": "property",
+        "applies_to": "property_declaration",
+        "message": "Property names should be in PascalCase.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS005",
+        "category": "Naming Conventions",
+        "type": "style",
+        "pattern": "const",
+        "applies_to": "field_declaration",
+        "message": "Constants should be in ALL_CAPS with underscores.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS006",
+        "category": "Naming Conventions",
+        "type": "style",
+        "pattern": "interface",
+        "applies_to": "interface_declaration",
+        "message": "Interfaces should start with 'I'.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS007",
+        "category": "Naming Conventions",
+        "type": "style",
+        "pattern": "private_field",
+        "applies_to": "field_declaration",
+        "message": "Private fields should be in camelCase and prefixed with '_'.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS008",
+        "category": "Naming Conventions",
+        "type": "style",
+        "pattern": "async",
+        "applies_to": "method_declaration",
+        "message": "Async methods should end with 'Async' suffix.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS009",
+        "category": "Naming Conventions",
+        "type": "style",
+        "pattern": "event",
+        "applies_to": "event_declaration",
+        "message": "Event names should be in PascalCase and use verb form.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS010",
+        "category": "Code Style",
+        "type": "style",
+        "pattern": "indentation",
+        "applies_to": "all",
+        "message": "Use 4 spaces per indentation level, no tabs.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS011",
+        "category": "Code Style",
+        "type": "style",
+        "pattern": "braces",
+        "applies_to": "block",
+        "message": "Use braces for all control statements (if, for, while, etc.).",
+        "severity": "warning"
+      },
+      {
+        "id": "CS012",
+        "category": "Code Style",
+        "type": "style",
+        "pattern": "using",
+        "applies_to": "namespace",
+        "message": "Place 'using' directives inside namespace declarations.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS013",
+        "category": "Code Style",
+        "type": "style",
+        "pattern": "file",
+        "applies_to": "file",
+        "message": "One class per file; file name should match class name.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS014",
+        "category": "Code Style",
+        "type": "style",
+        "pattern": "line_length",
+        "applies_to": "all",
+        "message": "Maximum line length should be 120 characters.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS015",
+        "category": "Error Handling",
+        "type": "style",
+        "pattern": "try-catch",
+        "applies_to": "exception_handling",
+        "message": "Always catch specific exceptions instead of generic Exception.",
+        "severity": "error"
+      },
+      {
+        "id": "CS016",
+        "category": "Error Handling",
+        "type": "style",
+        "pattern": "finally",
+        "applies_to": "exception_handling",
+        "message": "Use finally block or 'using' for resource cleanup.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS017",
+        "category": "Error Handling",
+        "type": "forbidden",
+        "pattern": "throw ex",
+        "applies_to": "exception_handling",
+        "message": "Do not use 'throw ex'; use 'throw' to preserve stack trace.",
+        "severity": "error"
+      },
+      {
+        "id": "CS018",
+        "category": "Error Handling",
+        "type": "style",
+        "pattern": "logging",
+        "applies_to": "exception_handling",
+        "message": "Log exceptions before rethrowing or handling.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS019",
+        "category": "Performance",
+        "type": "forbidden",
+        "pattern": "Thread.Sleep",
+        "applies_to": "method_call",
+        "message": "Avoid Thread.Sleep. Use Task.Delay or proper synchronization.",
+        "severity": "error"
+      },
+      {
+        "id": "CS020",
+        "category": "Performance",
+        "type": "forbidden",
+        "pattern": "GC.Collect",
+        "applies_to": "method_call",
+        "message": "Do not call GC.Collect manually.",
+        "severity": "error"
+      },
+      {
+        "id": "CS021",
+        "category": "Performance",
+        "type": "style",
+        "pattern": "LINQ",
+        "applies_to": "query",
+        "message": "Avoid multiple enumerations of IEnumerable in LINQ queries.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS022",
+        "category": "Performance",
+        "type": "style",
+        "pattern": "async",
+        "applies_to": "method",
+        "message": "Use ConfigureAwait(false) in library code to avoid deadlocks.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS023",
+        "category": "Security",
+        "type": "forbidden",
+        "pattern": "Console.WriteLine",
+        "applies_to": "method_call",
+        "message": "Avoid Console.WriteLine in production; use logging framework.",
+        "severity": "error"
+      },
+      {
+        "id": "CS024",
+        "category": "Security",
+        "type": "forbidden",
+        "pattern": "SqlCommand.*string_concatenation",
+        "applies_to": "database_query",
+        "message": "Avoid SQL injection: use parameterized queries.",
+        "severity": "error"
+      },
+      {
+        "id": "CS025",
+        "category": "Security",
+        "type": "forbidden",
+        "pattern": "hardcoded_password",
+        "applies_to": "string_literal",
+        "message": "Do not store hardcoded passwords or secrets in code.",
+        "severity": "error"
+      },
+      {
+        "id": "CS026",
+        "category": "Security",
+        "type": "style",
+        "pattern": "encryption",
+        "applies_to": "data_handling",
+        "message": "Always use secure hashing (SHA256 or stronger) instead of MD5/SHA1.",
+        "severity": "error"
+      },
+      {
+        "id": "CS027",
+        "category": "Project Practices",
+        "type": "style",
+        "pattern": "comments",
+        "applies_to": "public_api",
+        "message": "Public methods, classes, and interfaces should have XML documentation comments.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS028",
+        "category": "Project Practices",
+        "type": "style",
+        "pattern": "region",
+        "applies_to": "code_blocks",
+        "message": "Avoid excessive use of #region. Keep methods and classes small and readable.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS029",
+        "category": "Project Practices",
+        "type": "style",
+        "pattern": "magic_number",
+        "applies_to": "constants",
+        "message": "Do not use magic numbers; use named constants or enums.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS030",
+        "category": "Project Practices",
+        "type": "style",
+        "pattern": "async_void",
+        "applies_to": "method",
+        "message": "Avoid async void methods. Use async Task instead.",
+        "severity": "error"
+      }
+    ]
   },
   "javascript": {
     "eslintOverride": {
