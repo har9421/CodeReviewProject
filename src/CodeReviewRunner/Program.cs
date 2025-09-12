@@ -27,10 +27,22 @@ class Program
         var rules = await fetcher.FetchAsync(rulesUrl);
 
         var issues = new List<CodeReviewRunner.Models.CodeIssue>();
-        issues.AddRange(new CSharpAnalyzer().Analyze(repoPath, rules));
-        issues.AddRange(new ReactAnalyzer().Analyze(repoPath, rules));
 
         var ado = new AzureDevOpsClient(pat!);
+        List<string> changedFiles;
+        try
+        {
+            changedFiles = await ado.GetChangedFilesAsync(orgUrl, project, repoId, prId, repoPath);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to fetch changed files; falling back to full repo scan. {ex.Message}");
+            changedFiles = new List<string>();
+        }
+
+        issues.AddRange(new CSharpAnalyzer().Analyze(repoPath, rules, changedFiles.Any() ? changedFiles : null));
+        issues.AddRange(new ReactAnalyzer().Analyze(repoPath, rules, changedFiles.Any() ? changedFiles : null));
+
         await ado.PostCommentsAsync(orgUrl, project, repoId, prId, repoPath, issues);
         //  await ado.PostSummaryAsync(orgUrl, project, repoId, prId, issues);
 

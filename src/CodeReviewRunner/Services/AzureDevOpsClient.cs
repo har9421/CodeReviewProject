@@ -14,6 +14,38 @@ public class AzureDevOpsClient
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", token);
     }
 
+    public async Task<List<string>> GetChangedFilesAsync(string org, string project, string repoId, string prId, string repoPath)
+    {
+        var url = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.1-preview.1";
+        var res = await _http.GetAsync(url);
+        res.EnsureSuccessStatusCode();
+        var json = await res.Content.ReadAsStringAsync();
+
+        var files = new List<string>();
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        if (doc.RootElement.TryGetProperty("changes", out var changes))
+        {
+            foreach (var change in changes.EnumerateArray())
+            {
+                // Exclude deletions
+                if (change.TryGetProperty("changeType", out var changeTypeEl) && string.Equals(changeTypeEl.GetString(), "delete", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (change.TryGetProperty("item", out var item) && item.TryGetProperty("path", out var pathEl))
+                {
+                    var relativePath = pathEl.GetString() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(relativePath))
+                        continue;
+
+                    // API paths are like "/src/Project/File.cs"; make absolute on disk
+                    var combined = Path.Combine(repoPath, relativePath.TrimStart('/', '\\'));
+                    files.Add(combined);
+                }
+            }
+        }
+        return files;
+    }
+
     public async Task PostCommentsAsync(string org, string project, string repoId, string prId, string repoPath, List<CodeIssue> issues)
     {
         var url = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/threads?api-version=6.0";
