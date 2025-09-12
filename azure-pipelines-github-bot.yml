@@ -34,9 +34,9 @@ jobs:
         inputs:
           versionSpec: "18.x"
 
-      - script: npm ci
-        workingDirectory: $(Build.SourcesDirectory)/review-bot
-        displayName: "Install NPM packages for bot"
+      # - script: npm ci
+      #   workingDirectory: $(Build.SourcesDirectory)/review-bot
+      #   displayName: "Install NPM packages for bot"
 
       - task: UseDotNet@2
         inputs:
