@@ -9,10 +9,23 @@ public class ReactAnalyzer
     public List<CodeIssue> Analyze(string repoPath, JObject rules)
     {
         var results = new List<CodeIssue>();
+
+        // Skip ESLint when the repository has no JS/TS files
+        var hasJsTs = Directory.EnumerateFiles(
+            repoPath,
+            "*",
+            new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true }
+        ).Any(p => p.EndsWith(".js", StringComparison.OrdinalIgnoreCase)
+                 || p.EndsWith(".jsx", StringComparison.OrdinalIgnoreCase)
+                 || p.EndsWith(".ts", StringComparison.OrdinalIgnoreCase)
+                 || p.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase));
+        if (!hasJsTs)
+            return results;
         var configPath = Path.Combine(Path.GetTempPath(), "eslint-config.json");
         File.WriteAllText(configPath, rules["javascript"]?["eslintOverride"]?.ToString() ?? "{}");
 
-        var psi = new ProcessStartInfo("npx", $"--yes eslint@9 eslint . -f json -c \"{configPath}\"")
+        // Correct npx syntax: invoke eslint@9 binary with arguments; do not pass an extra 'eslint' pattern
+        var psi = new ProcessStartInfo("npx", $"--yes eslint@9 -f json -c \"{configPath}\" .")
         {
             WorkingDirectory = repoPath,
             RedirectStandardOutput = true,
