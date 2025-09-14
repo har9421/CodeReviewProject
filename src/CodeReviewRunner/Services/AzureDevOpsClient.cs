@@ -14,32 +14,42 @@ public class AzureDevOpsClient
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", token);
     }
 
-    public async Task<bool> TestRepositoryAccessAsync(string org, string repoId)
+    public async Task<bool> TestRepositoryAccessAsync(string org, string project, string repoId)
     {
         try
         {
-            var url = $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}?api-version=7.0";
-            Console.WriteLine($"Testing repository access: {url}");
-
-            var response = await _http.GetAsync(url);
-            Console.WriteLine($"Repository access test - Status: {response.StatusCode}");
-
-            if (response.IsSuccessStatusCode)
+            // Try both with and without project name to see which works
+            var urls = new[]
             {
-                var content = await response.Content.ReadAsStringAsync();
-                using var doc = System.Text.Json.JsonDocument.Parse(content);
-                if (doc.RootElement.TryGetProperty("name", out var nameProp))
+                $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}?api-version=7.0",
+                $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}?api-version=7.0"
+            };
+
+            foreach (var url in urls)
+            {
+                Console.WriteLine($"Testing repository access: {url}");
+
+                var response = await _http.GetAsync(url);
+                Console.WriteLine($"Repository access test - Status: {response.StatusCode}");
+
+                if (response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine($"Repository name: {nameProp.GetString()}");
+                    var content = await response.Content.ReadAsStringAsync();
+                    using var doc = System.Text.Json.JsonDocument.Parse(content);
+                    if (doc.RootElement.TryGetProperty("name", out var nameProp))
+                    {
+                        Console.WriteLine($"Repository name: {nameProp.GetString()}");
+                    }
+                    return true;
                 }
-                return true;
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Repository access failed: {response.StatusCode} - {errorContent}");
+                }
             }
-            else
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Repository access failed: {response.StatusCode} - {errorContent}");
-                return false;
-            }
+
+            return false;
         }
         catch (Exception ex)
         {
@@ -50,38 +60,50 @@ public class AzureDevOpsClient
 
     public async Task<List<(string path, string content)>> GetPullRequestChangedFilesAsync(string org, string project, string repoId, string prId)
     {
-        // Try different API versions and endpoints
-        var apiVersions = new[] { "7.0", "6.0", "5.1" };
-        var endpoints = new[]
+        // Try both with and without project name to see which works
+        var urls = new[]
         {
-            $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes",
-            $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes"
+            $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.0",
+            $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.0"
         };
 
-        foreach (var endpoint in endpoints)
+        Console.WriteLine($"Organization: {org}");
+        Console.WriteLine($"Project: {project}");
+        Console.WriteLine($"Repository ID: {repoId}");
+        Console.WriteLine($"Pull Request ID: {prId}");
+
+        foreach (var url in urls)
         {
-            foreach (var apiVersion in apiVersions)
+            Console.WriteLine($"Trying: {url}");
+
+            var response = await _http.GetAsync(url);
+            Console.WriteLine($"Response Status: {response.StatusCode}");
+            Console.WriteLine($"Response Headers: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(";", h.Value)}"))}");
+
+            if (response.IsSuccessStatusCode)
             {
-                var url = $"{endpoint}?api-version={apiVersion}";
-                Console.WriteLine($"Trying: {url}");
+                Console.WriteLine($"Success with URL: {url}");
+                return await ProcessPullRequestChanges(response);
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Failed with {url}: {response.StatusCode} - {errorContent}");
 
-                var response = await _http.GetAsync(url);
-                Console.WriteLine($"Response Status: {response.StatusCode}");
-
-                if (response.IsSuccessStatusCode)
+                // Try to get more details about the error
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    Console.WriteLine($"Success with endpoint: {endpoint}, API version: {apiVersion}");
-                    return await ProcessPullRequestChanges(response);
-                }
-                else
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Failed with {endpoint} v{apiVersion}: {response.StatusCode} - {errorContent}");
+                    Console.WriteLine("404 Not Found - This could mean:");
+                    Console.WriteLine("1. The repository ID is incorrect");
+                    Console.WriteLine("2. The pull request ID is incorrect");
+                    Console.WriteLine("3. The pull request doesn't exist");
+                    Console.WriteLine("4. Insufficient permissions to access the repository/PR");
+                    Console.WriteLine("5. The API version is not supported");
                 }
             }
         }
 
-        Console.WriteLine("All API endpoint attempts failed");
+        Console.WriteLine("All URL attempts failed");
         return new List<(string path, string content)>();
     }
 
@@ -136,7 +158,7 @@ public class AzureDevOpsClient
         try
         {
             // Get the PR details to find the source branch
-            var prUrl = $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/pullRequests/{prId}?api-version=7.0";
+            var prUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}?api-version=7.0";
             var prResponse = await _http.GetAsync(prUrl);
             if (!prResponse.IsSuccessStatusCode)
             {
@@ -160,7 +182,7 @@ public class AzureDevOpsClient
             }
 
             // Get the file content from the source branch
-            var contentUrl = $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/items?path={Uri.EscapeDataString(filePath)}&version={Uri.EscapeDataString(sourceBranch)}&api-version=7.0";
+            var contentUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/items?path={Uri.EscapeDataString(filePath)}&version={Uri.EscapeDataString(sourceBranch)}&api-version=7.0";
             var contentResponse = await _http.GetAsync(contentUrl);
 
             if (contentResponse.IsSuccessStatusCode)
@@ -182,7 +204,7 @@ public class AzureDevOpsClient
 
     public async Task PostCommentsAsync(string org, string project, string repoId, string prId, string repoPath, List<CodeIssue> issues, IEnumerable<string>? allowedFilePaths = null)
     {
-        var url = $"{org}/_apis/git/repositories/{repoId}/pullRequests/{prId}/threads?api-version=6.0";
+        var url = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/threads?api-version=6.0";
 
         var allowedSet = allowedFilePaths != null
             ? new HashSet<string>(allowedFilePaths.Select(p => NormalizeForCompare(repoPath, p)), StringComparer.OrdinalIgnoreCase)
@@ -229,7 +251,7 @@ public class AzureDevOpsClient
 
     public async Task PostSummaryAsync(string org, string project, string repoId, string prId, List<CodeIssue> issues)
     {
-        var url = $"{org}/_apis/git/repositories/{repoId}/pullRequests/{prId}/threads?api-version=6.0";
+        var url = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/threads?api-version=6.0";
 
         var errorCount = issues.Count(i => i.Severity.Equals("error", StringComparison.OrdinalIgnoreCase));
         var warnCount = issues.Count(i => i.Severity.Equals("warning", StringComparison.OrdinalIgnoreCase));

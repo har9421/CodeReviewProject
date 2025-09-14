@@ -38,7 +38,7 @@ class Program
 
             // First test repository access
             Console.WriteLine("Testing repository access...");
-            var repoAccess = await ado.TestRepositoryAccessAsync(orgUrl, repoId);
+            var repoAccess = await ado.TestRepositoryAccessAsync(orgUrl, project, repoId);
             if (!repoAccess)
             {
                 Console.Error.WriteLine("Failed to access repository. Check your credentials and repository ID.");
