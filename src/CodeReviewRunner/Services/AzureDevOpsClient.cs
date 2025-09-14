@@ -58,11 +58,57 @@ public class AzureDevOpsClient
         }
     }
 
+    private async Task<string> GetRepositoryNameAsync(string org, string project, string repoId)
+    {
+        try
+        {
+            // Try both with and without project name to see which works
+            var urls = new[]
+            {
+                $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}?api-version=7.0",
+                $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}?api-version=7.0"
+            };
+
+            foreach (var url in urls)
+            {
+                var response = await _http.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    using var doc = System.Text.Json.JsonDocument.Parse(content);
+                    if (doc.RootElement.TryGetProperty("name", out var nameProp))
+                    {
+                        return nameProp.GetString() ?? string.Empty;
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Exception getting repository name: {ex.Message}");
+            return string.Empty;
+        }
+    }
+
     public async Task<List<(string path, string content)>> GetPullRequestChangedFilesAsync(string org, string project, string repoId, string prId)
     {
-        // Try both with and without project name to see which works
+        // First get the repository name from the repository ID
+        var repoName = await GetRepositoryNameAsync(org, project, repoId);
+        if (string.IsNullOrEmpty(repoName))
+        {
+            Console.WriteLine("Could not determine repository name from repository ID");
+            return new List<(string path, string content)>();
+        }
+
+        Console.WriteLine($"Repository name: {repoName}");
+
+        // Try different URL formats with the repository name
         var urls = new[]
         {
+            $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoName}/pullRequests/{prId}/changes?api-version=7.0",
+            $"{org.TrimEnd('/')}/_apis/git/repositories/{repoName}/pullRequests/{prId}/changes?api-version=7.0",
             $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.0",
             $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.0"
         };
