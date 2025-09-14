@@ -16,7 +16,7 @@ public class AzureDevOpsClient
 
     public async Task<List<(string path, string content)>> GetPullRequestChangedFilesAsync(string org, string project, string repoId, string prId)
     {
-        var url = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.0";
+        var url = $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.0";
         Console.WriteLine($"Fetching PR changes from: {url}");
 
         var response = await _http.GetAsync(url);
@@ -84,7 +84,7 @@ public class AzureDevOpsClient
         try
         {
             // Get the PR details to find the source branch
-            var prUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}?api-version=7.0";
+            var prUrl = $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/pullRequests/{prId}?api-version=7.0";
             var prResponse = await _http.GetAsync(prUrl);
             if (!prResponse.IsSuccessStatusCode)
             {
@@ -108,7 +108,7 @@ public class AzureDevOpsClient
             }
 
             // Get the file content from the source branch
-            var contentUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/items?path={Uri.EscapeDataString(filePath)}&version={Uri.EscapeDataString(sourceBranch)}&api-version=7.0";
+            var contentUrl = $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/items?path={Uri.EscapeDataString(filePath)}&version={Uri.EscapeDataString(sourceBranch)}&api-version=7.0";
             var contentResponse = await _http.GetAsync(contentUrl);
 
             if (contentResponse.IsSuccessStatusCode)
@@ -130,7 +130,7 @@ public class AzureDevOpsClient
 
     public async Task PostCommentsAsync(string org, string project, string repoId, string prId, string repoPath, List<CodeIssue> issues, IEnumerable<string>? allowedFilePaths = null)
     {
-        var url = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/threads?api-version=6.0";
+        var url = $"{org}/_apis/git/repositories/{repoId}/pullRequests/{prId}/threads?api-version=6.0";
 
         var allowedSet = allowedFilePaths != null
             ? new HashSet<string>(allowedFilePaths.Select(p => NormalizeForCompare(repoPath, p)), StringComparer.OrdinalIgnoreCase)
@@ -177,7 +177,7 @@ public class AzureDevOpsClient
 
     public async Task PostSummaryAsync(string org, string project, string repoId, string prId, List<CodeIssue> issues)
     {
-        var url = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/threads?api-version=6.0";
+        var url = $"{org}/_apis/git/repositories/{repoId}/pullRequests/{prId}/threads?api-version=6.0";
 
         var errorCount = issues.Count(i => i.Severity.Equals("error", StringComparison.OrdinalIgnoreCase));
         var warnCount = issues.Count(i => i.Severity.Equals("warning", StringComparison.OrdinalIgnoreCase));
