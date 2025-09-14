@@ -20,7 +20,13 @@ public class AzureDevOpsClient
         Console.WriteLine($"Repository path exists: {Directory.Exists(repoPath)}");
         if (Directory.Exists(repoPath))
         {
-            Console.WriteLine($"Repository path contents: {string.Join(", ", Directory.GetDirectories(repoPath).Take(5))}");
+            Console.WriteLine($"Repository path contents (directories): {string.Join(", ", Directory.GetDirectories(repoPath).Take(10))}");
+            Console.WriteLine($"Repository path contents (files): {string.Join(", ", Directory.GetFiles(repoPath).Take(10))}");
+        }
+        else
+        {
+            Console.WriteLine($"ERROR: Repository path does not exist: {repoPath}");
+            return new List<string>();
         }
 
         // Get latest iteration id
@@ -95,7 +101,23 @@ public class AzureDevOpsClient
                         var normalizedPath = path.TrimStart('/', '\\');
                         var combined = Path.Combine(repoPath, normalizedPath);
                         Console.WriteLine($"  Original path: '{path}' -> Normalized: '{normalizedPath}' -> Combined: '{combined}'");
-                        files.Add(combined);
+                        Console.WriteLine($"  File exists: {File.Exists(combined)}");
+                        if (File.Exists(combined))
+                        {
+                            files.Add(combined);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"  WARNING: File not found, checking if it's a directory...");
+                            if (Directory.Exists(combined))
+                            {
+                                Console.WriteLine($"  Found as directory, skipping...");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"  Neither file nor directory exists");
+                            }
+                        }
                     }
                 }
             }
@@ -150,7 +172,23 @@ public class AzureDevOpsClient
                                     var normalizedPath = path.TrimStart('/', '\\');
                                     var combined = Path.Combine(repoPath, normalizedPath);
                                     Console.WriteLine($"  Fallback - Original path: '{path}' -> Normalized: '{normalizedPath}' -> Combined: '{combined}'");
-                                    files.Add(combined);
+                                    Console.WriteLine($"  Fallback - File exists: {File.Exists(combined)}");
+                                    if (File.Exists(combined))
+                                    {
+                                        files.Add(combined);
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"  Fallback - WARNING: File not found, checking if it's a directory...");
+                                        if (Directory.Exists(combined))
+                                        {
+                                            Console.WriteLine($"  Fallback - Found as directory, skipping...");
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine($"  Fallback - Neither file nor directory exists");
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -159,7 +197,13 @@ public class AzureDevOpsClient
             }
         }
 
-        return files.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var distinctFiles = files.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        Console.WriteLine($"Total files found: {distinctFiles.Count}");
+        foreach (var file in distinctFiles)
+        {
+            Console.WriteLine($"  Final file: {file} (exists: {File.Exists(file)})");
+        }
+        return distinctFiles;
     }
 
     public async Task PostCommentsAsync(string org, string project, string repoId, string prId, string repoPath, List<CodeIssue> issues, IEnumerable<string>? allowedFilePaths = null)
