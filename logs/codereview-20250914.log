@@ -1,0 +1,10 @@
+2025-09-14 16:37:52.517 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-14 16:37:52.666 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-14 16:37:52.666 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-14 16:37:52.669 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-14 16:37:52.670 +05:30 [INF] Analysis completed in 2.7173ms
+2025-09-14 16:37:52.671 +05:30 [INF] Files analyzed: 0
+2025-09-14 16:37:52.672 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-14 16:37:52.672 +05:30 [ERR] Errors: No valid files found for analysis.
+2025-09-14 16:37:52.672 +05:30 [WRN] Warnings: File not found: test-files/sample.cs, File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-14 16:37:52.672 +05:30 [INF] No issues found
