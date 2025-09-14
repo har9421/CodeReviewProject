@@ -55,6 +55,8 @@ public class AzureDevOpsService : IAzureDevOpsService
             }
 
             _logger.LogInformation("Repository name: {RepositoryName}", repoName);
+            _logger.LogInformation("Repository ID: {RepositoryId}", repositoryId);
+            _logger.LogInformation("Pull Request ID: {PullRequestId}", pullRequestId);
 
             // List pull requests to see what's available
             await ListPullRequestsAsync(organization, project, repositoryId, repoName, cancellationToken);
@@ -65,10 +67,13 @@ public class AzureDevOpsService : IAzureDevOpsService
 
             foreach (var version in apiVersions)
             {
-                urls.Add($"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repoName}/pullRequests/{pullRequestId}/changes?api-version={version}");
-                urls.Add($"{organization.TrimEnd('/')}/_apis/git/repositories/{repoName}/pullRequests/{pullRequestId}/changes?api-version={version}");
+                // Use repository ID for pull request changes API (this is the correct approach)
                 urls.Add($"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/changes?api-version={version}");
                 urls.Add($"{organization.TrimEnd('/')}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/changes?api-version={version}");
+
+                // Also try with repository name as fallback
+                urls.Add($"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repoName}/pullRequests/{pullRequestId}/changes?api-version={version}");
+                urls.Add($"{organization.TrimEnd('/')}/_apis/git/repositories/{repoName}/pullRequests/{pullRequestId}/changes?api-version={version}");
             }
 
             foreach (var url in urls)
@@ -86,7 +91,16 @@ public class AzureDevOpsService : IAzureDevOpsService
                 else
                 {
                     var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                    _logger.LogDebug("Failed with {Url}: {StatusCode} - {Error}", url, response.StatusCode, errorContent);
+
+                    // Check if we got HTML instead of JSON (common with 404s)
+                    if (errorContent.TrimStart().StartsWith("<!DOCTYPE html", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogDebug("Failed with {Url}: {StatusCode} - Received HTML response (likely 404 page)", url, response.StatusCode);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Failed with {Url}: {StatusCode} - {Error}", url, response.StatusCode, errorContent);
+                    }
                 }
             }
 
