@@ -27,8 +27,10 @@ public class CSharpAnalyzer
             );
         }
 
+        Console.WriteLine($"CSharpAnalyzer: Processing {csFiles.Count()} C# files");
         foreach (var file in csFiles)
         {
+            Console.WriteLine($"  Analyzing: {file}");
             var text = File.ReadAllText(file);
             var ruleSet = (JArray?)rules["csharp"]?["rules"];
             foreach (var rule in ruleSet ?? new JArray())

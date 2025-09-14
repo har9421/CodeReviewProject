@@ -30,6 +30,7 @@ public class ReactAnalyzer
                      || p.EndsWith(".ts", StringComparison.OrdinalIgnoreCase)
                      || p.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase));
         }
+        Console.WriteLine($"ReactAnalyzer: Processing {targetFiles.Count()} JS/TS files");
         if (!targetFiles.Any())
             return results;
         var configPath = Path.Combine(Path.GetTempPath(), "eslint-config.json");

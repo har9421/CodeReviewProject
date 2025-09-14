@@ -32,11 +32,16 @@ class Program
         List<string> changedFiles;
         try
         {
+            Console.WriteLine($"Fetching changed files for PR {prId} in repo {repoId}");
+            Console.WriteLine($"Organization URL: {orgUrl}");
+            Console.WriteLine($"Project: {project}");
+            Console.WriteLine($"Repository Path: {repoPath}");
             changedFiles = await ado.GetChangedFilesAsync(orgUrl, project, repoId, prId, repoPath);
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Failed to fetch changed files. {ex.Message}");
+            Console.Error.WriteLine($"Stack trace: {ex.StackTrace}");
             changedFiles = new List<string>();
         }
 
@@ -47,7 +52,14 @@ class Program
             return 0;
         }
         Console.WriteLine($"Changed files detected: {changedFiles.Count}");
-        foreach (var f in changedFiles.Take(50)) Console.WriteLine($" - {f}");
+        foreach (var f in changedFiles.Take(50))
+        {
+            Console.WriteLine($" - {f}");
+            if (!File.Exists(f))
+            {
+                Console.WriteLine($"   WARNING: File does not exist: {f}");
+            }
+        }
 
         var csIssues = new CSharpAnalyzer().Analyze(repoPath, rules, changedFiles);
         Console.WriteLine($"C# issues: {csIssues.Count}");
