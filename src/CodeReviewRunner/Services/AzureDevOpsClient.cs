@@ -92,6 +92,58 @@ public class AzureDevOpsClient
         }
     }
 
+    private async Task ListPullRequestsAsync(string org, string project, string repoId, string repoName)
+    {
+        try
+        {
+            Console.WriteLine("\n=== Listing Pull Requests ===");
+            var urls = new[]
+            {
+                $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests?api-version=7.0",
+                $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/pullRequests?api-version=7.0",
+                $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoName}/pullRequests?api-version=7.0",
+                $"{org.TrimEnd('/')}/_apis/git/repositories/{repoName}/pullRequests?api-version=7.0"
+            };
+
+            foreach (var url in urls)
+            {
+                Console.WriteLine($"Trying: {url}");
+                var response = await _http.GetAsync(url);
+                Console.WriteLine($"Status: {response.StatusCode}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    using var doc = System.Text.Json.JsonDocument.Parse(content);
+                    if (doc.RootElement.TryGetProperty("value", out var valueProp))
+                    {
+                        Console.WriteLine("Pull requests found:");
+                        foreach (var pr in valueProp.EnumerateArray())
+                        {
+                            if (pr.TryGetProperty("pullRequestId", out var idProp) &&
+                                pr.TryGetProperty("title", out var titleProp))
+                            {
+                                var id = idProp.GetInt32();
+                                var title = titleProp.GetString();
+                                Console.WriteLine($"  - PR #{id}: {title}");
+                            }
+                        }
+                    }
+                    return;
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error: {error}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Exception listing pull requests: {ex.Message}");
+        }
+    }
+
     public async Task<List<(string path, string content)>> GetPullRequestChangedFilesAsync(string org, string project, string repoId, string prId)
     {
         // First get the repository name from the repository ID
@@ -104,14 +156,20 @@ public class AzureDevOpsClient
 
         Console.WriteLine($"Repository name: {repoName}");
 
-        // Try different URL formats with the repository name
-        var urls = new[]
+        // List pull requests to see what's available
+        await ListPullRequestsAsync(org, project, repoId, repoName);
+
+        // Try different URL formats and API versions
+        var apiVersions = new[] { "7.0", "6.0", "5.1", "4.1" };
+        var urls = new List<string>();
+
+        foreach (var version in apiVersions)
         {
-            $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoName}/pullRequests/{prId}/changes?api-version=7.0",
-            $"{org.TrimEnd('/')}/_apis/git/repositories/{repoName}/pullRequests/{prId}/changes?api-version=7.0",
-            $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.0",
-            $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.0"
-        };
+            urls.Add($"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoName}/pullRequests/{prId}/changes?api-version={version}");
+            urls.Add($"{org.TrimEnd('/')}/_apis/git/repositories/{repoName}/pullRequests/{prId}/changes?api-version={version}");
+            urls.Add($"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version={version}");
+            urls.Add($"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version={version}");
+        }
 
         Console.WriteLine($"Organization: {org}");
         Console.WriteLine($"Project: {project}");
