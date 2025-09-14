@@ -58,6 +58,40 @@ public class CSharpAnalyzer
         return issues;
     }
 
+    public List<CodeIssue> AnalyzeFromContent(JObject rules, IEnumerable<(string path, string content)> files)
+    {
+        var issues = new List<CodeIssue>();
+
+        Console.WriteLine($"CSharpAnalyzer: Processing {files.Count()} C# files from content");
+        foreach (var (path, content) in files)
+        {
+            Console.WriteLine($"  Analyzing: {path}");
+            var ruleSet = (JArray?)rules["csharp"]?["rules"];
+            foreach (var rule in ruleSet ?? new JArray())
+            {
+                var type = (string?)rule["type"];
+                var pattern = (string?)rule["pattern"];
+                var message = (string?)rule["message"];
+                var severity = (string?)rule["severity"];
+                var id = (string?)rule["id"];
+
+                if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && content.Contains(pattern))
+                {
+                    var line = GetLineNumber(content, pattern);
+                    issues.Add(new CodeIssue
+                    {
+                        FilePath = path,
+                        Line = line,
+                        Message = message ?? "Rule violation",
+                        Severity = severity ?? "error",
+                        RuleId = id ?? "CS000"
+                    });
+                }
+            }
+        }
+        return issues;
+    }
+
     private int GetLineNumber(string text, string pattern)
     {
         var index = text.IndexOf(pattern);

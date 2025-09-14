@@ -29,20 +29,19 @@ class Program
         var issues = new List<CodeReviewRunner.Models.CodeIssue>();
 
         var ado = new AzureDevOpsClient(pat!);
-        List<string> changedFiles;
+        List<(string path, string content)> changedFiles;
         try
         {
             Console.WriteLine($"Fetching changed files for PR {prId} in repo {repoId}");
             Console.WriteLine($"Organization URL: {orgUrl}");
             Console.WriteLine($"Project: {project}");
-            Console.WriteLine($"Repository Path: {repoPath}");
-            changedFiles = await ado.GetChangedFilesAsync(orgUrl, project, repoId, prId, repoPath);
+            changedFiles = await ado.GetPullRequestChangedFilesAsync(orgUrl, project, repoId, prId);
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Failed to fetch changed files. {ex.Message}");
             Console.Error.WriteLine($"Stack trace: {ex.StackTrace}");
-            changedFiles = new List<string>();
+            changedFiles = new List<(string path, string content)>();
         }
 
         // Never analyze the whole repo if we failed to fetch PR changes. If none found, exit cleanly.
@@ -52,23 +51,24 @@ class Program
             return 0;
         }
         Console.WriteLine($"Changed files detected: {changedFiles.Count}");
-        foreach (var f in changedFiles.Take(50))
+        foreach (var (path, content) in changedFiles.Take(50))
         {
-            Console.WriteLine($" - {f}");
-            if (!File.Exists(f))
-            {
-                Console.WriteLine($"   WARNING: File does not exist: {f}");
-            }
+            Console.WriteLine($" - {path} ({content.Length} characters)");
         }
 
-        var csIssues = new CSharpAnalyzer().Analyze(repoPath, rules, changedFiles);
+        var csIssues = new CSharpAnalyzer().AnalyzeFromContent(rules, changedFiles.Where(f => f.path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)));
         Console.WriteLine($"C# issues: {csIssues.Count}");
         issues.AddRange(csIssues);
-        var jsIssues = new ReactAnalyzer().Analyze(repoPath, rules, changedFiles);
+        var jsFiles = changedFiles.Where(f =>
+            f.path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+            f.path.EndsWith(".jsx", StringComparison.OrdinalIgnoreCase) ||
+            f.path.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
+            f.path.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase));
+        var jsIssues = new ReactAnalyzer().AnalyzeFromContent(rules, jsFiles);
         Console.WriteLine($"JS/TS issues: {jsIssues.Count}");
         issues.AddRange(jsIssues);
 
-        await ado.PostCommentsAsync(orgUrl, project, repoId, prId, repoPath, issues, changedFiles);
+        await ado.PostCommentsAsync(orgUrl, project, repoId, prId, repoPath, issues, changedFiles.Select(f => f.path));
         //  await ado.PostSummaryAsync(orgUrl, project, repoId, prId, issues);
 
         return issues.Any(i => i.Severity == "error") ? 1 : 0;

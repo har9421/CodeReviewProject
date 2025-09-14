@@ -74,4 +74,86 @@ public class ReactAnalyzer
         }
         return results;
     }
+
+    public List<CodeIssue> AnalyzeFromContent(JObject rules, IEnumerable<(string path, string content)> files)
+    {
+        var results = new List<CodeIssue>();
+
+        Console.WriteLine($"ReactAnalyzer: Processing {files.Count()} JS/TS files from content");
+        if (!files.Any())
+            return results;
+
+        var configPath = Path.Combine(Path.GetTempPath(), "eslint-config.json");
+        File.WriteAllText(configPath, rules["javascript"]?["eslintOverride"]?.ToString() ?? "{}");
+
+        // Create temporary files for ESLint to analyze
+        var tempFiles = new List<string>();
+        try
+        {
+            foreach (var (path, content) in files)
+            {
+                var tempFile = Path.Combine(Path.GetTempPath(), Path.GetFileName(path));
+                File.WriteAllText(tempFile, content);
+                tempFiles.Add(tempFile);
+            }
+
+            var filesArg = string.Join(" ", tempFiles.Select(f => $"\"{f}\""));
+            var psi = new ProcessStartInfo("npx", $"--yes eslint@9 -f json -c \"{configPath}\" {filesArg}")
+            {
+                WorkingDirectory = Path.GetTempPath(),
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+
+            var proc = Process.Start(psi)!;
+            var output = proc.StandardOutput.ReadToEnd();
+            var error = proc.StandardError.ReadToEnd();
+            proc.WaitForExit();
+
+            if (proc.ExitCode != 0 && string.IsNullOrWhiteSpace(output))
+            {
+                Console.Error.WriteLine($"ESLint failed: {error}");
+                return results;
+            }
+
+            var arr = string.IsNullOrWhiteSpace(output) ? new JArray() : JArray.Parse(output);
+            var fileIndex = 0;
+            foreach (var file in arr)
+            {
+                var originalPath = files.ElementAt(fileIndex).path;
+                fileIndex++;
+
+                foreach (var msg in file["messages"]!)
+                {
+                    results.Add(new CodeIssue
+                    {
+                        FilePath = originalPath,
+                        Line = (int?)msg["line"] ?? 1,
+                        Message = (string?)msg["message"] ?? "ESLint issue",
+                        Severity = ((int?)msg["severity"] == 2 ? "error" : "warning"),
+                        RuleId = (string?)msg["ruleId"] ?? "JS000"
+                    });
+                }
+            }
+        }
+        finally
+        {
+            // Clean up temporary files
+            foreach (var tempFile in tempFiles)
+            {
+                try
+                {
+                    if (File.Exists(tempFile))
+                        File.Delete(tempFile);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Could not delete temporary file {tempFile}: {ex.Message}");
+                }
+            }
+        }
+
+        return results;
+    }
 }
