@@ -14,19 +14,79 @@ public class AzureDevOpsClient
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", token);
     }
 
+    public async Task<bool> TestRepositoryAccessAsync(string org, string repoId)
+    {
+        try
+        {
+            var url = $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}?api-version=7.0";
+            Console.WriteLine($"Testing repository access: {url}");
+
+            var response = await _http.GetAsync(url);
+            Console.WriteLine($"Repository access test - Status: {response.StatusCode}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                using var doc = System.Text.Json.JsonDocument.Parse(content);
+                if (doc.RootElement.TryGetProperty("name", out var nameProp))
+                {
+                    Console.WriteLine($"Repository name: {nameProp.GetString()}");
+                }
+                return true;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Repository access failed: {response.StatusCode} - {errorContent}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Exception testing repository access: {ex.Message}");
+            return false;
+        }
+    }
+
     public async Task<List<(string path, string content)>> GetPullRequestChangedFilesAsync(string org, string project, string repoId, string prId)
     {
-        var url = $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.0";
-        Console.WriteLine($"Fetching PR changes from: {url}");
-
-        var response = await _http.GetAsync(url);
-        if (!response.IsSuccessStatusCode)
+        // Try different API versions and endpoints
+        var apiVersions = new[] { "7.0", "6.0", "5.1" };
+        var endpoints = new[]
         {
-            var errorContent = await response.Content.ReadAsStringAsync();
-            Console.WriteLine($"Failed to fetch PR changes: {response.StatusCode} - {errorContent}");
-            return new List<(string path, string content)>();
+            $"{org.TrimEnd('/')}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes",
+            $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes"
+        };
+
+        foreach (var endpoint in endpoints)
+        {
+            foreach (var apiVersion in apiVersions)
+            {
+                var url = $"{endpoint}?api-version={apiVersion}";
+                Console.WriteLine($"Trying: {url}");
+
+                var response = await _http.GetAsync(url);
+                Console.WriteLine($"Response Status: {response.StatusCode}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"Success with endpoint: {endpoint}, API version: {apiVersion}");
+                    return await ProcessPullRequestChanges(response);
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Failed with {endpoint} v{apiVersion}: {response.StatusCode} - {errorContent}");
+                }
+            }
         }
 
+        Console.WriteLine("All API endpoint attempts failed");
+        return new List<(string path, string content)>();
+    }
+
+    private async Task<List<(string path, string content)>> ProcessPullRequestChanges(HttpResponseMessage response)
+    {
         var json = await response.Content.ReadAsStringAsync();
         using var doc = System.Text.Json.JsonDocument.Parse(json);
 
@@ -61,17 +121,9 @@ public class AzureDevOpsClient
 
                 Console.WriteLine($"  Found changed file: {path}");
 
-                // Fetch actual file content from the PR
-                var content = await GetFileContentAsync(org, project, repoId, prId, path);
-                if (!string.IsNullOrEmpty(content))
-                {
-                    result.Add((path, content));
-                    Console.WriteLine($"  Successfully fetched content for: {path} ({content.Length} characters)");
-                }
-                else
-                {
-                    Console.WriteLine($"  Failed to fetch content for: {path}");
-                }
+                // For now, just add the path without content to test the API
+                result.Add((path, ""));
+                Console.WriteLine($"  Added file to analysis list: {path}");
             }
         }
 
