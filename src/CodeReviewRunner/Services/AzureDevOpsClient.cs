@@ -14,196 +14,118 @@ public class AzureDevOpsClient
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", token);
     }
 
-    public async Task<List<string>> GetChangedFilesAsync(string org, string project, string repoId, string prId, string repoPath)
+    public async Task<List<(string path, string content)>> GetPullRequestChangedFilesAsync(string org, string project, string repoId, string prId)
     {
-        Console.WriteLine($"GetChangedFilesAsync called with repoPath: '{repoPath}'");
-        Console.WriteLine($"Repository path exists: {Directory.Exists(repoPath)}");
-        if (Directory.Exists(repoPath))
+        var url = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/changes?api-version=7.0";
+        Console.WriteLine($"Fetching PR changes from: {url}");
+
+        var response = await _http.GetAsync(url);
+        if (!response.IsSuccessStatusCode)
         {
-            Console.WriteLine($"Repository path contents (directories): {string.Join(", ", Directory.GetDirectories(repoPath).Take(10))}");
-            Console.WriteLine($"Repository path contents (files): {string.Join(", ", Directory.GetFiles(repoPath).Take(10))}");
-        }
-        else
-        {
-            Console.WriteLine($"ERROR: Repository path does not exist: {repoPath}");
-            return new List<string>();
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"Failed to fetch PR changes: {response.StatusCode} - {errorContent}");
+            return new List<(string path, string content)>();
         }
 
-        // Get latest iteration id
-        var iterationsUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/iterations?api-version=7.0";
-        Console.WriteLine($"Fetching iterations from: {iterationsUrl}");
-        var iterRes = await _http.GetAsync(iterationsUrl);
-        if (!iterRes.IsSuccessStatusCode)
-        {
-            var errorContent = await iterRes.Content.ReadAsStringAsync();
-            Console.WriteLine($"Failed to fetch iterations: {iterRes.StatusCode} - {errorContent}");
-            return new List<string>();
-        }
-        var iterJson = await iterRes.Content.ReadAsStringAsync();
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
 
-        int latestIterationId = 0;
-        using (var iterDoc = System.Text.Json.JsonDocument.Parse(iterJson))
+        var result = new List<(string path, string content)>();
+
+        if (doc.RootElement.TryGetProperty("changes", out var changes))
         {
-            if (iterDoc.RootElement.TryGetProperty("value", out var iterations))
+            foreach (var change in changes.EnumerateArray())
             {
-                foreach (var it in iterations.EnumerateArray())
+                if (!change.TryGetProperty("item", out var item)) continue;
+                if (!item.TryGetProperty("path", out var pathProp)) continue;
+
+                var path = pathProp.GetString();
+                if (string.IsNullOrEmpty(path)) continue;
+
+                // Check if it's a file we want to analyze (C# or JS/TS files)
+                var isAnalyzableFile = path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+                                     path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+                                     path.EndsWith(".jsx", StringComparison.OrdinalIgnoreCase) ||
+                                     path.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
+                                     path.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase);
+
+                if (!isAnalyzableFile) continue;
+
+                // Skip deleted files
+                if (change.TryGetProperty("changeType", out var changeTypeEl))
                 {
-                    if (it.TryGetProperty("id", out var idEl))
-                    {
-                        var id = idEl.GetInt32();
-                        if (id > latestIterationId) latestIterationId = id;
-                    }
+                    var changeType = changeTypeEl.GetString();
+                    if (string.Equals(changeType, "delete", StringComparison.OrdinalIgnoreCase))
+                        continue;
                 }
-            }
-        }
-        if (latestIterationId == 0)
-            return new List<string>();
 
-        var url = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/iterations/{latestIterationId}/changes?api-version=7.0";
-        Console.WriteLine($"Fetching changes from: {url}");
-        var res = await _http.GetAsync(url);
-        var files = new List<string>();
+                Console.WriteLine($"  Found changed file: {path}");
 
-        if (res.IsSuccessStatusCode)
-        {
-            var json = await res.Content.ReadAsStringAsync();
-            using (var doc = System.Text.Json.JsonDocument.Parse(json))
-            {
-                // Some endpoints return 'changes', others 'value'
-                if (!doc.RootElement.TryGetProperty("changes", out var changes) && !doc.RootElement.TryGetProperty("value", out changes))
+                // Fetch actual file content from the PR
+                var content = await GetFileContentAsync(org, project, repoId, prId, path);
+                if (!string.IsNullOrEmpty(content))
                 {
-                    changes = default;
+                    result.Add((path, content));
+                    Console.WriteLine($"  Successfully fetched content for: {path} ({content.Length} characters)");
                 }
-                if (changes.ValueKind == System.Text.Json.JsonValueKind.Array)
+                else
                 {
-                    foreach (var change in changes.EnumerateArray())
-                    {
-                        if (change.TryGetProperty("changeType", out var changeTypeEl))
-                        {
-                            var changeType = changeTypeEl.GetString();
-                            if (string.Equals(changeType, "delete", StringComparison.OrdinalIgnoreCase))
-                                continue;
-                        }
-
-                        string? path = null;
-                        if (change.TryGetProperty("item", out var item) && item.TryGetProperty("path", out var pathEl))
-                        {
-                            path = pathEl.GetString();
-                        }
-                        if (string.IsNullOrWhiteSpace(path) && change.TryGetProperty("originalPath", out var origPathEl))
-                        {
-                            path = origPathEl.GetString();
-                        }
-                        if (string.IsNullOrWhiteSpace(path))
-                            continue;
-
-                        // Normalize the path by removing leading slashes and backslashes
-                        var normalizedPath = path.TrimStart('/', '\\');
-                        var combined = Path.Combine(repoPath, normalizedPath);
-                        Console.WriteLine($"  Original path: '{path}' -> Normalized: '{normalizedPath}' -> Combined: '{combined}'");
-                        Console.WriteLine($"  File exists: {File.Exists(combined)}");
-                        if (File.Exists(combined))
-                        {
-                            files.Add(combined);
-                        }
-                        else
-                        {
-                            Console.WriteLine($"  WARNING: File not found, checking if it's a directory...");
-                            if (Directory.Exists(combined))
-                            {
-                                Console.WriteLine($"  Found as directory, skipping...");
-                            }
-                            else
-                            {
-                                Console.WriteLine($"  Neither file nor directory exists");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            var errorContent = await res.Content.ReadAsStringAsync();
-            Console.WriteLine($"Failed to fetch changes: {res.StatusCode} - {errorContent}");
-        }
-
-        if (files.Count == 0)
-        {
-            // Fallback via commits aggregation
-            var commitsUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/commits?api-version=7.0";
-            Console.WriteLine($"Fallback: Fetching commits from: {commitsUrl}");
-            var commitsRes = await _http.GetAsync(commitsUrl);
-            if (!commitsRes.IsSuccessStatusCode)
-            {
-                var errorContent = await commitsRes.Content.ReadAsStringAsync();
-                Console.WriteLine($"Failed to fetch commits: {commitsRes.StatusCode} - {errorContent}");
-                return files;
-            }
-            var commitsJson = await commitsRes.Content.ReadAsStringAsync();
-            using var commitsDoc = System.Text.Json.JsonDocument.Parse(commitsJson);
-            if (commitsDoc.RootElement.TryGetProperty("value", out var commitsArr))
-            {
-                foreach (var commit in commitsArr.EnumerateArray())
-                {
-                    var commitId = commit.TryGetProperty("commitId", out var idEl) ? idEl.GetString() : null;
-                    if (string.IsNullOrWhiteSpace(commitId)) continue;
-                    var chUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/commits/{commitId}/changes?api-version=7.0";
-                    var chRes = await _http.GetAsync(chUrl);
-                    if (!chRes.IsSuccessStatusCode) continue;
-                    var chJson = await chRes.Content.ReadAsStringAsync();
-                    using var chDoc = System.Text.Json.JsonDocument.Parse(chJson);
-                    if (chDoc.RootElement.TryGetProperty("changes", out var chChanges) || chDoc.RootElement.TryGetProperty("value", out chChanges))
-                    {
-                        foreach (var change in chChanges.EnumerateArray())
-                        {
-                            if (change.TryGetProperty("changeType", out var changeTypeEl))
-                            {
-                                var changeType = changeTypeEl.GetString();
-                                if (string.Equals(changeType, "delete", StringComparison.OrdinalIgnoreCase))
-                                    continue;
-                            }
-                            if (change.TryGetProperty("item", out var item) && item.TryGetProperty("path", out var pathEl))
-                            {
-                                var path = pathEl.GetString();
-                                if (!string.IsNullOrWhiteSpace(path))
-                                {
-                                    // Normalize the path by removing leading slashes and backslashes
-                                    var normalizedPath = path.TrimStart('/', '\\');
-                                    var combined = Path.Combine(repoPath, normalizedPath);
-                                    Console.WriteLine($"  Fallback - Original path: '{path}' -> Normalized: '{normalizedPath}' -> Combined: '{combined}'");
-                                    Console.WriteLine($"  Fallback - File exists: {File.Exists(combined)}");
-                                    if (File.Exists(combined))
-                                    {
-                                        files.Add(combined);
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine($"  Fallback - WARNING: File not found, checking if it's a directory...");
-                                        if (Directory.Exists(combined))
-                                        {
-                                            Console.WriteLine($"  Fallback - Found as directory, skipping...");
-                                        }
-                                        else
-                                        {
-                                            Console.WriteLine($"  Fallback - Neither file nor directory exists");
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    Console.WriteLine($"  Failed to fetch content for: {path}");
                 }
             }
         }
 
-        var distinctFiles = files.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        Console.WriteLine($"Total files found: {distinctFiles.Count}");
-        foreach (var file in distinctFiles)
+        Console.WriteLine($"Total analyzable files found: {result.Count}");
+        return result;
+    }
+
+    private async Task<string> GetFileContentAsync(string org, string project, string repoId, string prId, string filePath)
+    {
+        try
         {
-            Console.WriteLine($"  Final file: {file} (exists: {File.Exists(file)})");
+            // Get the PR details to find the source branch
+            var prUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}?api-version=7.0";
+            var prResponse = await _http.GetAsync(prUrl);
+            if (!prResponse.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"Failed to fetch PR details: {prResponse.StatusCode}");
+                return string.Empty;
+            }
+
+            var prJson = await prResponse.Content.ReadAsStringAsync();
+            using var prDoc = System.Text.Json.JsonDocument.Parse(prJson);
+
+            string? sourceBranch = null;
+            if (prDoc.RootElement.TryGetProperty("sourceRefName", out var sourceRefEl))
+            {
+                sourceBranch = sourceRefEl.GetString()?.Replace("refs/heads/", "");
+            }
+
+            if (string.IsNullOrEmpty(sourceBranch))
+            {
+                Console.WriteLine("Could not determine source branch");
+                return string.Empty;
+            }
+
+            // Get the file content from the source branch
+            var contentUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/items?path={Uri.EscapeDataString(filePath)}&version={Uri.EscapeDataString(sourceBranch)}&api-version=7.0";
+            var contentResponse = await _http.GetAsync(contentUrl);
+
+            if (contentResponse.IsSuccessStatusCode)
+            {
+                return await contentResponse.Content.ReadAsStringAsync();
+            }
+            else
+            {
+                Console.WriteLine($"Failed to fetch file content for {filePath}: {contentResponse.StatusCode}");
+                return string.Empty;
+            }
         }
-        return distinctFiles;
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Exception while fetching file content for {filePath}: {ex.Message}");
+            return string.Empty;
+        }
     }
 
     public async Task PostCommentsAsync(string org, string project, string repoId, string prId, string repoPath, List<CodeIssue> issues, IEnumerable<string>? allowedFilePaths = null)
