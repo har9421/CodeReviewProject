@@ -35,6 +35,16 @@ class Program
             Console.WriteLine($"Fetching changed files for PR {prId} in repo {repoId}");
             Console.WriteLine($"Organization URL: {orgUrl}");
             Console.WriteLine($"Project: {project}");
+
+            // First test repository access
+            Console.WriteLine("Testing repository access...");
+            var repoAccess = await ado.TestRepositoryAccessAsync(orgUrl, repoId);
+            if (!repoAccess)
+            {
+                Console.Error.WriteLine("Failed to access repository. Check your credentials and repository ID.");
+                return 1;
+            }
+
             changedFiles = await ado.GetPullRequestChangedFilesAsync(orgUrl, project, repoId, prId);
         }
         catch (Exception ex)
