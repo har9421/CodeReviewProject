@@ -17,9 +17,15 @@ public class AzureDevOpsClient
     public async Task<List<string>> GetChangedFilesAsync(string org, string project, string repoId, string prId, string repoPath)
     {
         // Get latest iteration id
-        var iterationsUrl = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/iterations?api-version=7.1-preview.1";
+        var iterationsUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/iterations?api-version=7.0";
+        Console.WriteLine($"Fetching iterations from: {iterationsUrl}");
         var iterRes = await _http.GetAsync(iterationsUrl);
-        iterRes.EnsureSuccessStatusCode();
+        if (!iterRes.IsSuccessStatusCode)
+        {
+            var errorContent = await iterRes.Content.ReadAsStringAsync();
+            Console.WriteLine($"Failed to fetch iterations: {iterRes.StatusCode} - {errorContent}");
+            return new List<string>();
+        }
         var iterJson = await iterRes.Content.ReadAsStringAsync();
 
         int latestIterationId = 0;
@@ -40,53 +46,67 @@ public class AzureDevOpsClient
         if (latestIterationId == 0)
             return new List<string>();
 
-        var url = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/iterations/{latestIterationId}/changes?api-version=7.1-preview.1";
+        var url = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/iterations/{latestIterationId}/changes?api-version=7.0";
+        Console.WriteLine($"Fetching changes from: {url}");
         var res = await _http.GetAsync(url);
-        res.EnsureSuccessStatusCode();
-        var json = await res.Content.ReadAsStringAsync();
-
         var files = new List<string>();
-        using (var doc = System.Text.Json.JsonDocument.Parse(json))
-        {
-            // Some endpoints return 'changes', others 'value'
-            if (!doc.RootElement.TryGetProperty("changes", out var changes) && !doc.RootElement.TryGetProperty("value", out changes))
-            {
-                changes = default;
-            }
-            if (changes.ValueKind == System.Text.Json.JsonValueKind.Array)
-            {
-                foreach (var change in changes.EnumerateArray())
-                {
-                    if (change.TryGetProperty("changeType", out var changeTypeEl))
-                    {
-                        var changeType = changeTypeEl.GetString();
-                        if (string.Equals(changeType, "delete", StringComparison.OrdinalIgnoreCase))
-                            continue;
-                    }
 
-                    string? path = null;
-                    if (change.TryGetProperty("item", out var item) && item.TryGetProperty("path", out var pathEl))
+        if (res.IsSuccessStatusCode)
+        {
+            var json = await res.Content.ReadAsStringAsync();
+            using (var doc = System.Text.Json.JsonDocument.Parse(json))
+            {
+                // Some endpoints return 'changes', others 'value'
+                if (!doc.RootElement.TryGetProperty("changes", out var changes) && !doc.RootElement.TryGetProperty("value", out changes))
+                {
+                    changes = default;
+                }
+                if (changes.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var change in changes.EnumerateArray())
                     {
-                        path = pathEl.GetString();
+                        if (change.TryGetProperty("changeType", out var changeTypeEl))
+                        {
+                            var changeType = changeTypeEl.GetString();
+                            if (string.Equals(changeType, "delete", StringComparison.OrdinalIgnoreCase))
+                                continue;
+                        }
+
+                        string? path = null;
+                        if (change.TryGetProperty("item", out var item) && item.TryGetProperty("path", out var pathEl))
+                        {
+                            path = pathEl.GetString();
+                        }
+                        if (string.IsNullOrWhiteSpace(path) && change.TryGetProperty("originalPath", out var origPathEl))
+                        {
+                            path = origPathEl.GetString();
+                        }
+                        if (string.IsNullOrWhiteSpace(path))
+                            continue;
+                        var combined = Path.Combine(repoPath, path.TrimStart('/', '\\'));
+                        files.Add(combined);
                     }
-                    if (string.IsNullOrWhiteSpace(path) && change.TryGetProperty("originalPath", out var origPathEl))
-                    {
-                        path = origPathEl.GetString();
-                    }
-                    if (string.IsNullOrWhiteSpace(path))
-                        continue;
-                    var combined = Path.Combine(repoPath, path.TrimStart('/', '\\'));
-                    files.Add(combined);
                 }
             }
+        }
+        else
+        {
+            var errorContent = await res.Content.ReadAsStringAsync();
+            Console.WriteLine($"Failed to fetch changes: {res.StatusCode} - {errorContent}");
         }
 
         if (files.Count == 0)
         {
             // Fallback via commits aggregation
-            var commitsUrl = $"{org}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/commits?api-version=7.1-preview.1";
+            var commitsUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/commits?api-version=7.0";
+            Console.WriteLine($"Fallback: Fetching commits from: {commitsUrl}");
             var commitsRes = await _http.GetAsync(commitsUrl);
-            commitsRes.EnsureSuccessStatusCode();
+            if (!commitsRes.IsSuccessStatusCode)
+            {
+                var errorContent = await commitsRes.Content.ReadAsStringAsync();
+                Console.WriteLine($"Failed to fetch commits: {commitsRes.StatusCode} - {errorContent}");
+                return files;
+            }
             var commitsJson = await commitsRes.Content.ReadAsStringAsync();
             using var commitsDoc = System.Text.Json.JsonDocument.Parse(commitsJson);
             if (commitsDoc.RootElement.TryGetProperty("value", out var commitsArr))
@@ -95,7 +115,7 @@ public class AzureDevOpsClient
                 {
                     var commitId = commit.TryGetProperty("commitId", out var idEl) ? idEl.GetString() : null;
                     if (string.IsNullOrWhiteSpace(commitId)) continue;
-                    var chUrl = $"{org}/{project}/_apis/git/repositories/{repoId}/commits/{commitId}/changes?api-version=7.1-preview.1";
+                    var chUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/commits/{commitId}/changes?api-version=7.0";
                     var chRes = await _http.GetAsync(chUrl);
                     if (!chRes.IsSuccessStatusCode) continue;
                     var chJson = await chRes.Content.ReadAsStringAsync();
