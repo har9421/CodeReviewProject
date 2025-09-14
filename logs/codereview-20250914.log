@@ -8,3 +8,118 @@
 2025-09-14 16:37:52.672 +05:30 [ERR] Errors: No valid files found for analysis.
 2025-09-14 16:37:52.672 +05:30 [WRN] Warnings: File not found: test-files/sample.cs, File not found: test-files/sample.tsx, File not found: test-files/sample.js
 2025-09-14 16:37:52.672 +05:30 [INF] No issues found
+2025-09-14 16:50:18.871 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-14 16:50:18.981 +05:30 [ERR] Invalid arguments. Expected: <repoPath> <rulesUrl> <prId> <orgUrl> <project> <repoId>
+2025-09-14 16:50:18.982 +05:30 [INF] For local testing: dotnet run test <rulesUrl> test <orgUrl> <project> <repoId>
+2025-09-14 16:51:52.444 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-14 16:51:52.560 +05:30 [ERR] SYSTEM_ACCESSTOKEN is not set. Enable 'Allow scripts to access OAuth token' in the pipeline or set a PAT.
+2025-09-14 16:51:52.560 +05:30 [INF] For local testing, use: dotnet run test <rulesUrl> test <orgUrl> <project> <repoId>
+2025-09-14 16:51:59.085 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-14 16:51:59.185 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-14 16:51:59.185 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-14 16:51:59.188 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-14 16:51:59.189 +05:30 [INF] Analysis completed in 2.7539ms
+2025-09-14 16:51:59.190 +05:30 [INF] Files analyzed: 0
+2025-09-14 16:51:59.190 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-14 16:51:59.191 +05:30 [ERR] Errors: No valid files found for analysis.
+2025-09-14 16:51:59.191 +05:30 [WRN] Warnings: File not found: test-files/sample.cs, File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-14 16:51:59.191 +05:30 [INF] No issues found
+2025-09-14 16:52:18.761 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-14 16:52:18.866 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-14 16:52:18.867 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-14 16:52:18.869 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-14 16:52:18.870 +05:30 [INF] Analysis completed in 2.615ms
+2025-09-14 16:52:18.871 +05:30 [INF] Files analyzed: 0
+2025-09-14 16:52:18.872 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-14 16:52:18.872 +05:30 [ERR] Errors: No valid files found for analysis.
+2025-09-14 16:52:18.872 +05:30 [WRN] Warnings: File not found: test-files/sample.cs, File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-14 16:52:18.872 +05:30 [INF] No issues found
+2025-09-14 16:53:50.605 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-14 16:53:50.714 +05:30 [INF] Starting pull request analysis for PR 128 in repository 801d272d-36b5-4f23-9674-01aa63f48ce8
+2025-09-14 16:53:50.715 +05:30 [INF] Starting pull request analysis for PR 128 in repository 801d272d-36b5-4f23-9674-01aa63f48ce8
+2025-09-14 16:53:50.716 +05:30 [DBG] Testing repository access: https://dev.azure.com/khUniverse/sso/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8?api-version=7.0
+2025-09-14 16:53:50.793 +05:30 [DBG] Repository access test - Status: "OK"
+2025-09-14 16:53:50.795 +05:30 [INF] Repository name: authservice
+2025-09-14 16:53:50.796 +05:30 [INF] Fetching changed files for PR 128 in repository 801d272d-36b5-4f23-9674-01aa63f48ce8
+2025-09-14 16:53:50.823 +05:30 [INF] Repository name: authservice
+2025-09-14 16:53:50.823 +05:30 [INF] Repository ID: 801d272d-36b5-4f23-9674-01aa63f48ce8
+2025-09-14 16:53:50.823 +05:30 [INF] Pull Request ID: 128
+2025-09-14 16:53:50.824 +05:30 [DBG] Listing pull requests for repository authservice
+2025-09-14 16:53:50.824 +05:30 [DBG] Trying: https://dev.azure.com/khUniverse/sso/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests?api-version=7.0
+2025-09-14 16:53:50.858 +05:30 [DBG] Status: "OK"
+2025-09-14 16:53:50.859 +05:30 [INF] Pull requests found:
+2025-09-14 16:53:50.859 +05:30 [INF]   - PR #128: test (Status: active)
+2025-09-14 16:53:50.859 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/sso/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=7.0
+2025-09-14 16:53:50.905 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:50.905 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/sso/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=7.0: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:50.906 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=7.0
+2025-09-14 16:53:50.931 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:50.931 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=7.0: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:50.931 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/sso/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=7.0
+2025-09-14 16:53:50.958 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:50.958 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/sso/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=7.0: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:50.958 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=7.0
+2025-09-14 16:53:50.982 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:50.982 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=7.0: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:50.982 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/sso/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=6.0
+2025-09-14 16:53:51.009 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.009 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/sso/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=6.0: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.009 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=6.0
+2025-09-14 16:53:51.035 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.035 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=6.0: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.035 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/sso/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=6.0
+2025-09-14 16:53:51.065 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.065 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/sso/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=6.0: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.065 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=6.0
+2025-09-14 16:53:51.097 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.097 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=6.0: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.097 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/sso/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=5.1
+2025-09-14 16:53:51.123 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.123 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/sso/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=5.1: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.123 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=5.1
+2025-09-14 16:53:51.153 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.153 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=5.1: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.153 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/sso/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=5.1
+2025-09-14 16:53:51.181 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.181 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/sso/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=5.1: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.181 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=5.1
+2025-09-14 16:53:51.206 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.206 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=5.1: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.206 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/sso/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=4.1
+2025-09-14 16:53:51.229 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.229 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/sso/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=4.1: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.229 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=4.1
+2025-09-14 16:53:51.253 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.253 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8/pullRequests/128/changes?api-version=4.1: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.253 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/sso/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=4.1
+2025-09-14 16:53:51.436 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.436 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/sso/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=4.1: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.436 +05:30 [INF] Trying: https://dev.azure.com/khUniverse/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=4.1
+2025-09-14 16:53:51.464 +05:30 [INF] Response Status: "NotFound"
+2025-09-14 16:53:51.464 +05:30 [WRN] ❌ Failed with https://dev.azure.com/khUniverse/_apis/git/repositories/authservice/pullRequests/128/changes?api-version=4.1: "NotFound" - Received HTML response (likely 404 page)
+2025-09-14 16:53:51.464 +05:30 [ERR] All URL attempts failed for PR 128
+2025-09-14 16:53:51.465 +05:30 [INF] Analysis completed in 749.0278ms
+2025-09-14 16:53:51.466 +05:30 [INF] Files analyzed: 0
+2025-09-14 16:53:51.466 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-14 16:53:51.466 +05:30 [WRN] Warnings: No changed files detected in pull request.
+2025-09-14 16:53:51.466 +05:30 [INF] No issues found
+2025-09-14 16:53:53.878 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-14 16:53:53.971 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-14 16:53:53.972 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-14 16:53:53.974 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-14 16:53:53.975 +05:30 [INF] Analysis completed in 2.3884ms
+2025-09-14 16:53:53.976 +05:30 [INF] Files analyzed: 0
+2025-09-14 16:53:53.976 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-14 16:53:53.976 +05:30 [ERR] Errors: No valid files found for analysis.
+2025-09-14 16:53:53.976 +05:30 [WRN] Warnings: File not found: test-files/sample.cs, File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-14 16:53:53.977 +05:30 [INF] No issues found
+2025-09-14 16:59:12.134 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-14 16:59:12.254 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-14 16:59:12.255 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-14 16:59:12.257 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-14 16:59:12.258 +05:30 [INF] Analysis completed in 2.6508ms
+2025-09-14 16:59:12.259 +05:30 [INF] Files analyzed: 0
+2025-09-14 16:59:12.260 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-14 16:59:12.260 +05:30 [ERR] Errors: No valid files found for analysis.
+2025-09-14 16:59:12.260 +05:30 [WRN] Warnings: File not found: test-files/sample.cs, File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-14 16:59:12.260 +05:30 [INF] No issues found

@@ -58,49 +58,89 @@ public class AzureDevOpsService : IAzureDevOpsService
             _logger.LogInformation("Repository ID: {RepositoryId}", repositoryId);
             _logger.LogInformation("Pull Request ID: {PullRequestId}", pullRequestId);
 
+            // Check if the pull request ID is valid
+            if (!int.TryParse(pullRequestId, out var prId))
+            {
+                _logger.LogError("Invalid pull request ID format: {PullRequestId}. Expected a numeric value.", pullRequestId);
+                return new List<(string path, string content)>();
+            }
+
             // List pull requests to see what's available
             await ListPullRequestsAsync(organization, project, repositoryId, repoName, cancellationToken);
 
-            // Try different URL formats and API versions
+            // First, get the pull request details to understand its structure
+            var prDetails = await GetPullRequestDetailsAsync(organization, project, repositoryId, pullRequestId, cancellationToken);
+            if (prDetails == null)
+            {
+                _logger.LogError("Could not fetch pull request details for PR {PullRequestId}", pullRequestId);
+                return new List<(string path, string content)>();
+            }
+
+            // Now try to get the changes using different approaches
             var apiVersions = new[] { "7.0", "6.0", "5.1", "4.1" };
             var urls = new List<string>();
 
             foreach (var version in apiVersions)
             {
-                // Use repository ID for pull request changes API (this is the correct approach)
+                // Approach 1: Try the changes endpoint directly
                 urls.Add($"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/changes?api-version={version}");
                 urls.Add($"{organization.TrimEnd('/')}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/changes?api-version={version}");
 
-                // Also try with repository name as fallback
+                // Approach 2: Try with repository name
                 urls.Add($"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repoName}/pullRequests/{pullRequestId}/changes?api-version={version}");
                 urls.Add($"{organization.TrimEnd('/')}/_apis/git/repositories/{repoName}/pullRequests/{pullRequestId}/changes?api-version={version}");
+
+                // Approach 3: Try getting commits first, then changes from commits
+                urls.Add($"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/commits?api-version={version}");
+                urls.Add($"{organization.TrimEnd('/')}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/commits?api-version={version}");
             }
 
             foreach (var url in urls)
             {
-                _logger.LogDebug("Trying: {Url}", url);
+                _logger.LogInformation("Trying: {Url}", url);
 
-                var response = await _httpClient.GetAsync(url, cancellationToken);
-                _logger.LogDebug("Response Status: {StatusCode}", response.StatusCode);
-
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    _logger.LogInformation("Success with URL: {Url}", url);
-                    return await ProcessPullRequestChanges(response, cancellationToken);
-                }
-                else
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    var response = await _httpClient.GetAsync(url, cancellationToken);
+                    _logger.LogInformation("Response Status: {StatusCode}", response.StatusCode);
 
-                    // Check if we got HTML instead of JSON (common with 404s)
-                    if (errorContent.TrimStart().StartsWith("<!DOCTYPE html", StringComparison.OrdinalIgnoreCase))
+                    if (response.IsSuccessStatusCode)
                     {
-                        _logger.LogDebug("Failed with {Url}: {StatusCode} - Received HTML response (likely 404 page)", url, response.StatusCode);
+                        _logger.LogInformation("✅ Success with URL: {Url}", url);
+
+                        // Check if this is a changes endpoint or commits endpoint
+                        if (url.Contains("/changes"))
+                        {
+                            return await ProcessPullRequestChanges(response, cancellationToken);
+                        }
+                        else if (url.Contains("/commits"))
+                        {
+                            return await ProcessPullRequestCommits(response, cancellationToken);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Unknown response type for URL: {Url}", url);
+                            return new List<(string path, string content)>();
+                        }
                     }
                     else
                     {
-                        _logger.LogDebug("Failed with {Url}: {StatusCode} - {Error}", url, response.StatusCode, errorContent);
+                        var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                        // Check if we got HTML instead of JSON (common with 404s)
+                        if (errorContent.TrimStart().StartsWith("<!DOCTYPE html", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _logger.LogWarning("❌ Failed with {Url}: {StatusCode} - Received HTML response (likely 404 page)", url, response.StatusCode);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("❌ Failed with {Url}: {StatusCode} - {Error}", url, response.StatusCode, errorContent.Length > 500 ? errorContent.Substring(0, 500) + "..." : errorContent);
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ Exception calling {Url}", url);
                 }
             }
 
@@ -339,7 +379,12 @@ public class AzureDevOpsService : IAzureDevOpsService
                             {
                                 var id = idProp.GetInt32();
                                 var title = titleProp.GetString();
-                                _logger.LogInformation("  - PR #{Id}: {Title}", id, title);
+                                var status = "Unknown";
+                                if (pr.TryGetProperty("status", out var statusProp))
+                                {
+                                    status = statusProp.GetString() ?? "Unknown";
+                                }
+                                _logger.LogInformation("  - PR #{Id}: {Title} (Status: {Status})", id, title, status);
                             }
                         }
                     }
@@ -399,6 +444,76 @@ public class AzureDevOpsService : IAzureDevOpsService
 
         _logger.LogInformation("Total analyzable files found: {Count}", result.Count);
         return result;
+    }
+
+    private async Task<List<(string path, string content)>> ProcessPullRequestCommits(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+
+            var result = new List<(string path, string content)>();
+
+            if (doc.RootElement.TryGetProperty("value", out var commits))
+            {
+                _logger.LogInformation("Found {CommitCount} commits in pull request", commits.GetArrayLength());
+
+                foreach (var commit in commits.EnumerateArray())
+                {
+                    if (commit.TryGetProperty("commitId", out var commitIdProp))
+                    {
+                        var commitId = commitIdProp.GetString();
+                        _logger.LogInformation("Processing commit: {CommitId}", commitId);
+
+                        // For now, we'll add a placeholder for each commit
+                        // In a real implementation, you'd fetch the changes for each commit
+                        result.Add(($"commit-{commitId}.txt", $"Commit: {commitId}"));
+                    }
+                }
+            }
+
+            _logger.LogInformation("Processed {FileCount} items from commits", result.Count);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing pull request commits");
+            return new List<(string path, string content)>();
+        }
+    }
+
+    private async Task<object?> GetPullRequestDetailsAsync(string organization, string project, string repositoryId, string pullRequestId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var url = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}?api-version=7.0";
+            _logger.LogInformation("Fetching pull request details: {Url}", url);
+
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
+                using var doc = System.Text.Json.JsonDocument.Parse(content);
+
+                _logger.LogInformation("✅ Successfully fetched pull request details");
+                _logger.LogInformation("PR Status: {Status}", doc.RootElement.GetProperty("status").GetString());
+                _logger.LogInformation("Source Branch: {SourceBranch}", doc.RootElement.GetProperty("sourceRefName").GetString());
+                _logger.LogInformation("Target Branch: {TargetBranch}", doc.RootElement.GetProperty("targetRefName").GetString());
+
+                return doc.RootElement;
+            }
+            else
+            {
+                _logger.LogError("Failed to fetch pull request details: {StatusCode}", response.StatusCode);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception fetching pull request details");
+            return null;
+        }
     }
 
     private static string NormalizeForCompare(string repoPath, string fullPath)
