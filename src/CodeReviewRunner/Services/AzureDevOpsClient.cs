@@ -16,6 +16,13 @@ public class AzureDevOpsClient
 
     public async Task<List<string>> GetChangedFilesAsync(string org, string project, string repoId, string prId, string repoPath)
     {
+        Console.WriteLine($"GetChangedFilesAsync called with repoPath: '{repoPath}'");
+        Console.WriteLine($"Repository path exists: {Directory.Exists(repoPath)}");
+        if (Directory.Exists(repoPath))
+        {
+            Console.WriteLine($"Repository path contents: {string.Join(", ", Directory.GetDirectories(repoPath).Take(5))}");
+        }
+
         // Get latest iteration id
         var iterationsUrl = $"{org.TrimEnd('/')}/{project}/_apis/git/repositories/{repoId}/pullRequests/{prId}/iterations?api-version=7.0";
         Console.WriteLine($"Fetching iterations from: {iterationsUrl}");
@@ -83,7 +90,11 @@ public class AzureDevOpsClient
                         }
                         if (string.IsNullOrWhiteSpace(path))
                             continue;
-                        var combined = Path.Combine(repoPath, path.TrimStart('/', '\\'));
+
+                        // Normalize the path by removing leading slashes and backslashes
+                        var normalizedPath = path.TrimStart('/', '\\');
+                        var combined = Path.Combine(repoPath, normalizedPath);
+                        Console.WriteLine($"  Original path: '{path}' -> Normalized: '{normalizedPath}' -> Combined: '{combined}'");
                         files.Add(combined);
                     }
                 }
@@ -135,7 +146,11 @@ public class AzureDevOpsClient
                                 var path = pathEl.GetString();
                                 if (!string.IsNullOrWhiteSpace(path))
                                 {
-                                    files.Add(Path.Combine(repoPath, path.TrimStart('/', '\\')));
+                                    // Normalize the path by removing leading slashes and backslashes
+                                    var normalizedPath = path.TrimStart('/', '\\');
+                                    var combined = Path.Combine(repoPath, normalizedPath);
+                                    Console.WriteLine($"  Fallback - Original path: '{path}' -> Normalized: '{normalizedPath}' -> Combined: '{combined}'");
+                                    files.Add(combined);
                                 }
                             }
                         }
