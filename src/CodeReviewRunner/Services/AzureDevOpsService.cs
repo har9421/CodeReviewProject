@@ -82,8 +82,7 @@ public class AzureDevOpsService : IAzureDevOpsService
 
             foreach (var version in apiVersions)
             {
-                // Only project-scoped endpoints with repositoryId are valid for our use case
-                urls.Add($"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/changes?api-version={version}");
+                // Only use commits endpoint; the changes endpoint frequently 404s depending on permissions/config
                 urls.Add($"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/commits?api-version={version}");
             }
 
@@ -100,12 +99,8 @@ public class AzureDevOpsService : IAzureDevOpsService
                     {
                         _logger.LogInformation("✅ Success with URL: {Url}", url);
 
-                        // Check if this is a changes endpoint or commits endpoint
-                        if (url.Contains("/changes"))
-                        {
-                            return await ProcessPullRequestChanges(response, cancellationToken);
-                        }
-                        else if (url.Contains("/commits"))
+                        // Only handling commits flow
+                        if (url.Contains("/commits"))
                         {
                             return await ProcessPullRequestCommits(organization, project, repositoryId, response, cancellationToken);
                         }
@@ -507,6 +502,7 @@ public class AzureDevOpsService : IAzureDevOpsService
                 using var doc = System.Text.Json.JsonDocument.Parse(json);
 
                 var result = new List<(string path, string content)>();
+                var changedPaths = new List<string>();
 
                 // Parse actual changed paths from diff response
                 if (doc.RootElement.TryGetProperty("changes", out var changesEl))
@@ -518,6 +514,7 @@ public class AzureDevOpsService : IAzureDevOpsService
                         var path = pathProp.GetString();
                         if (string.IsNullOrWhiteSpace(path)) continue;
 
+                        // Skip non-supported files early
                         var isAnalyzableFile = _options.Analysis.SupportedFileExtensions.Any(ext =>
                             path.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
                         if (!isAnalyzableFile) continue;
@@ -530,11 +527,35 @@ public class AzureDevOpsService : IAzureDevOpsService
                                 continue;
                         }
 
-                        result.Add((path, ""));
+                        changedPaths.Add(path);
                     }
                 }
 
                 _logger.LogInformation("Found changes in diff");
+
+                // Fetch actual contents for each changed file at the target commit
+                foreach (var path in changedPaths.Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    var fileUrl = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/items?path={Uri.EscapeDataString(path)}&versionDescriptor.version={toCommit}&versionDescriptor.versionType=commit&includeContent=true&resolveLfs=true&api-version={_options.AzureDevOps.ApiVersion}";
+                    try
+                    {
+                        var fileResponse = await _httpClient.GetAsync(fileUrl, cancellationToken);
+                        if (fileResponse.IsSuccessStatusCode)
+                        {
+                            var content = await fileResponse.Content.ReadAsStringAsync(cancellationToken);
+                            result.Add((path, content));
+                        }
+                        else
+                        {
+                            _logger.LogDebug("Could not fetch content for {Path}: {Status}", path, fileResponse.StatusCode);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Exception fetching content for {Path}", path);
+                    }
+                }
+
                 return result;
             }
             else
