@@ -115,7 +115,7 @@ public class AzureDevOpsService : IAzureDevOpsService
                         }
                         else if (url.Contains("/commits"))
                         {
-                            return await ProcessPullRequestCommits(response, cancellationToken);
+                            return await ProcessPullRequestCommits(organization, project, repositoryId, response, cancellationToken);
                         }
                         else
                         {
@@ -446,7 +446,12 @@ public class AzureDevOpsService : IAzureDevOpsService
         return result;
     }
 
-    private async Task<List<(string path, string content)>> ProcessPullRequestCommits(HttpResponseMessage response, CancellationToken cancellationToken)
+    private async Task<List<(string path, string content)>> ProcessPullRequestCommits(
+        string organization,
+        string project,
+        string repositoryId,
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -473,7 +478,7 @@ public class AzureDevOpsService : IAzureDevOpsService
                             firstCommitId.GetString(), lastCommitId.GetString());
 
                         // Try to get the diff between commits
-                        var changes = await GetChangesBetweenCommits(firstCommitId.GetString()!, lastCommitId.GetString()!, cancellationToken);
+                        var changes = await GetChangesBetweenCommits(organization, project, repositoryId, firstCommitId.GetString()!, lastCommitId.GetString()!, cancellationToken);
                         result.AddRange(changes);
                     }
                 }
@@ -489,12 +494,18 @@ public class AzureDevOpsService : IAzureDevOpsService
         }
     }
 
-    private async Task<List<(string path, string content)>> GetChangesBetweenCommits(string fromCommit, string toCommit, CancellationToken cancellationToken)
+    private async Task<List<(string path, string content)>> GetChangesBetweenCommits(
+        string organization,
+        string project,
+        string repositoryId,
+        string fromCommit,
+        string toCommit,
+        CancellationToken cancellationToken)
     {
         try
         {
             // Try to get the diff between commits
-            var diffUrl = $"{_httpClient.BaseAddress}git/diffs/commits?baseVersion={fromCommit}&targetVersion={toCommit}&api-version=7.0";
+            var diffUrl = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/diffs/commits?baseVersion={fromCommit}&targetVersion={toCommit}&api-version={_options.AzureDevOps.ApiVersion}";
             _logger.LogInformation("Getting diff between commits: {DiffUrl}", diffUrl);
 
             var response = await _httpClient.GetAsync(diffUrl, cancellationToken);
