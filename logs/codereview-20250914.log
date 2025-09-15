@@ -123,3 +123,13 @@
 2025-09-14 16:59:12.260 +05:30 [ERR] Errors: No valid files found for analysis.
 2025-09-14 16:59:12.260 +05:30 [WRN] Warnings: File not found: test-files/sample.cs, File not found: test-files/sample.tsx, File not found: test-files/sample.js
 2025-09-14 16:59:12.260 +05:30 [INF] No issues found
+2025-09-14 17:04:35.176 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-14 17:04:35.289 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-14 17:04:35.290 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-14 17:04:35.292 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-14 17:04:35.293 +05:30 [INF] Analysis completed in 2.5534ms
+2025-09-14 17:04:35.294 +05:30 [INF] Files analyzed: 0
+2025-09-14 17:04:35.295 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-14 17:04:35.295 +05:30 [ERR] Errors: No valid files found for analysis.
+2025-09-14 17:04:35.295 +05:30 [WRN] Warnings: File not found: test-files/sample.cs, File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-14 17:04:35.295 +05:30 [INF] No issues found
