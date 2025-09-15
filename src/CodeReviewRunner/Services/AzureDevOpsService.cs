@@ -505,7 +505,7 @@ public class AzureDevOpsService : IAzureDevOpsService
         try
         {
             // Try to get the diff between commits
-            var diffUrl = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/diffs/commits?baseVersion={fromCommit}&targetVersion={toCommit}&api-version={_options.AzureDevOps.ApiVersion}";
+            var diffUrl = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/diffs/commits?baseVersion={fromCommit}&baseVersionType=commit&targetVersion={toCommit}&targetVersionType=commit&api-version={_options.AzureDevOps.ApiVersion}";
             _logger.LogInformation("Getting diff between commits: {DiffUrl}", diffUrl);
 
             var response = await _httpClient.GetAsync(diffUrl, cancellationToken);
