@@ -82,17 +82,9 @@ public class AzureDevOpsService : IAzureDevOpsService
 
             foreach (var version in apiVersions)
             {
-                // Approach 1: Try the changes endpoint directly
+                // Only project-scoped endpoints with repositoryId are valid for our use case
                 urls.Add($"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/changes?api-version={version}");
-                urls.Add($"{organization.TrimEnd('/')}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/changes?api-version={version}");
-
-                // Approach 2: Try with repository name
-                urls.Add($"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repoName}/pullRequests/{pullRequestId}/changes?api-version={version}");
-                urls.Add($"{organization.TrimEnd('/')}/_apis/git/repositories/{repoName}/pullRequests/{pullRequestId}/changes?api-version={version}");
-
-                // Approach 3: Try getting commits first, then changes from commits
                 urls.Add($"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/commits?api-version={version}");
-                urls.Add($"{organization.TrimEnd('/')}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/commits?api-version={version}");
             }
 
             foreach (var url in urls)
@@ -516,43 +508,45 @@ public class AzureDevOpsService : IAzureDevOpsService
 
                 var result = new List<(string path, string content)>();
 
-                if (doc.RootElement.TryGetProperty("changeCounts", out var changeCounts))
+                // Parse actual changed paths from diff response
+                if (doc.RootElement.TryGetProperty("changes", out var changesEl))
                 {
-                    _logger.LogInformation("Found changes in diff");
+                    foreach (var change in changesEl.EnumerateArray())
+                    {
+                        if (!change.TryGetProperty("item", out var item)) continue;
+                        if (!item.TryGetProperty("path", out var pathProp)) continue;
+                        var path = pathProp.GetString();
+                        if (string.IsNullOrWhiteSpace(path)) continue;
 
-                    // For now, let's create some sample files to test the analysis
-                    // In a real implementation, you'd parse the actual diff and get file contents
-                    result.Add(("src/Controllers/UserController.cs", GetSampleCSharpCode()));
-                    result.Add(("src/Components/UserProfile.tsx", GetSampleReactCode()));
-                    result.Add(("src/utils/helpers.js", GetSampleJavaScriptCode()));
+                        var isAnalyzableFile = _options.Analysis.SupportedFileExtensions.Any(ext =>
+                            path.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+                        if (!isAnalyzableFile) continue;
+
+                        // Skip deletes
+                        if (change.TryGetProperty("changeType", out var changeTypeEl))
+                        {
+                            var changeType = changeTypeEl.GetString();
+                            if (string.Equals(changeType, "delete", StringComparison.OrdinalIgnoreCase))
+                                continue;
+                        }
+
+                        result.Add((path, ""));
+                    }
                 }
 
+                _logger.LogInformation("Found changes in diff");
                 return result;
             }
             else
             {
                 _logger.LogWarning("Failed to get diff between commits: {StatusCode}", response.StatusCode);
-
-                // Fallback: Create sample files for testing
-                return new List<(string path, string content)>
-                {
-                    ("src/Controllers/UserController.cs", GetSampleCSharpCode()),
-                    ("src/Components/UserProfile.tsx", GetSampleReactCode()),
-                    ("src/utils/helpers.js", GetSampleJavaScriptCode())
-                };
+                return new List<(string path, string content)>();
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting changes between commits");
-
-            // Fallback: Create sample files for testing
-            return new List<(string path, string content)>
-            {
-                ("src/Controllers/UserController.cs", GetSampleCSharpCode()),
-                ("src/Components/UserProfile.tsx", GetSampleReactCode()),
-                ("src/utils/helpers.js", GetSampleJavaScriptCode())
-            };
+            return new List<(string path, string content)>();
         }
     }
 
