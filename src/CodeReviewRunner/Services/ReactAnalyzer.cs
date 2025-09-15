@@ -37,7 +37,7 @@ public class ReactAnalyzer
         File.WriteAllText(configPath, rules["javascript"]?["eslintOverride"]?.ToString() ?? "{}");
 
         var filesArg = string.Join(" ", targetFiles.Select(f => $"\"{f}\""));
-        var psi = new ProcessStartInfo("npx", $"--yes eslint@9 -f json -c \"{configPath}\" {filesArg}")
+        var psi = new ProcessStartInfo("npx", $"--yes eslint@8 -f json -c \"{configPath}\" {filesArg}")
         {
             WorkingDirectory = repoPath,
             RedirectStandardOutput = true,
@@ -98,7 +98,7 @@ public class ReactAnalyzer
             }
 
             var filesArg = string.Join(" ", tempFiles.Select(f => $"\"{f}\""));
-            var psi = new ProcessStartInfo("npx", $"--yes eslint@9 -f json -c \"{configPath}\" {filesArg}")
+            var psi = new ProcessStartInfo("npx", $"--yes eslint@8 -f json -c \"{configPath}\" {filesArg}")
             {
                 WorkingDirectory = Path.GetTempPath(),
                 RedirectStandardOutput = true,
