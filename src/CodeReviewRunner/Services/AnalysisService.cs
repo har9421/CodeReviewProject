@@ -27,6 +27,7 @@ public class AnalysisService : IAnalysisService
     }
 
     public async Task<List<CodeIssue>> AnalyzeCSharpFilesAsync(
+        Newtonsoft.Json.Linq.JObject rules,
         IEnumerable<(string path, string content)> files,
         CancellationToken cancellationToken = default)
     {
@@ -39,9 +40,7 @@ public class AnalysisService : IAnalysisService
 
         _logger.LogInformation("Analyzing {FileCount} C# files", csharpFiles.Count);
 
-        var rules = await _rulesService.GetRulesAsync(cancellationToken);
-        var rulesJson = Newtonsoft.Json.Linq.JObject.FromObject(new { rules = rules });
-        var issues = _csharpAnalyzer.AnalyzeFromContent(rulesJson, csharpFiles);
+        var issues = _csharpAnalyzer.AnalyzeFromContent(rules, csharpFiles);
 
         // Enhance issues with additional metadata
         foreach (var issue in issues)
@@ -57,6 +56,7 @@ public class AnalysisService : IAnalysisService
     }
 
     public async Task<List<CodeIssue>> AnalyzeJavaScriptFilesAsync(
+        Newtonsoft.Json.Linq.JObject rules,
         IEnumerable<(string path, string content)> files,
         CancellationToken cancellationToken = default)
     {
@@ -73,9 +73,7 @@ public class AnalysisService : IAnalysisService
 
         _logger.LogInformation("Analyzing {FileCount} JavaScript/TypeScript files", jsFiles.Count);
 
-        var rules = await _rulesService.GetRulesAsync(cancellationToken);
-        var rulesJson = Newtonsoft.Json.Linq.JObject.FromObject(new { rules = rules });
-        var issues = _reactAnalyzer.AnalyzeFromContent(rulesJson, jsFiles);
+        var issues = _reactAnalyzer.AnalyzeFromContent(rules, jsFiles);
 
         // Enhance issues with additional metadata
         foreach (var issue in issues)
@@ -101,17 +99,18 @@ public class AnalysisService : IAnalysisService
     }
 
     public async Task<List<CodeIssue>> AnalyzeFilesAsync(
+        Newtonsoft.Json.Linq.JObject rules,
         IEnumerable<(string path, string content)> files,
         CancellationToken cancellationToken = default)
     {
         var allIssues = new List<CodeIssue>();
 
         // Analyze C# files
-        var csharpIssues = await AnalyzeCSharpFilesAsync(files, cancellationToken);
+        var csharpIssues = await AnalyzeCSharpFilesAsync(rules, files, cancellationToken);
         allIssues.AddRange(csharpIssues);
 
         // Analyze JavaScript/TypeScript files
-        var jsIssues = await AnalyzeJavaScriptFilesAsync(files, cancellationToken);
+        var jsIssues = await AnalyzeJavaScriptFilesAsync(rules, files, cancellationToken);
         allIssues.AddRange(jsIssues);
 
         _logger.LogInformation("Total analysis completed: {TotalIssues} issues found", allIssues.Count);
