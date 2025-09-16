@@ -215,20 +215,20 @@ public class AzureDevOpsService : IAzureDevOpsService
             {
                 var existingJson = await existingResp.Content.ReadAsStringAsync(cancellationToken);
                 using var existingDoc = System.Text.Json.JsonDocument.Parse(existingJson);
-                if (existingDoc.RootElement.TryGetProperty("value", out var threadsEl))
+                if (existingDoc.RootElement.TryGetProperty("value", out var threadsEl) && threadsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
                 {
                     foreach (var thread in threadsEl.EnumerateArray())
                     {
                         string? path = null;
                         int? line = null;
-                        if (thread.TryGetProperty("threadContext", out var ctx))
+                        if (thread.TryGetProperty("threadContext", out var ctx) && ctx.ValueKind == System.Text.Json.JsonValueKind.Object)
                         {
                             if (ctx.TryGetProperty("filePath", out var fp) && fp.ValueKind == System.Text.Json.JsonValueKind.String)
                                 path = fp.GetString();
-                            if (ctx.TryGetProperty("rightFileStart", out var rfs) && rfs.TryGetProperty("line", out var le))
+                            if (ctx.TryGetProperty("rightFileStart", out var rfs) && rfs.ValueKind == System.Text.Json.JsonValueKind.Object && rfs.TryGetProperty("line", out var le))
                                 line = le.GetInt32();
                         }
-                        if (thread.TryGetProperty("comments", out var commentsArr))
+                        if (thread.TryGetProperty("comments", out var commentsArr) && commentsArr.ValueKind == System.Text.Json.JsonValueKind.Array)
                         {
                             foreach (var c in commentsArr.EnumerateArray())
                             {
