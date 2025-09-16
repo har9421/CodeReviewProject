@@ -5,6 +5,7 @@ namespace CodeReviewRunner.Interfaces;
 public interface ICodeReviewService
 {
     Task<CodeReviewResult> AnalyzePullRequestAsync(
+        string rulesUrl,
         string organization,
         string project,
         string repositoryId,
@@ -12,6 +13,7 @@ public interface ICodeReviewService
         CancellationToken cancellationToken = default);
 
     Task<CodeReviewResult> AnalyzeLocalFilesAsync(
+        string rulesUrl,
         IEnumerable<string> filePaths,
         CancellationToken cancellationToken = default);
 }

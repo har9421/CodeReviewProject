@@ -69,7 +69,7 @@ public class CodeReviewApplication
         _logger.LogInformation("Analyzing local test files instead of Azure DevOps PR");
 
         var testFiles = GetLocalTestFiles();
-        var result = await _codeReviewService.AnalyzeLocalFilesAsync(testFiles.Select(f => f.path));
+        var result = await _codeReviewService.AnalyzeLocalFilesAsync(rulesUrl, testFiles.Select(f => f.path));
 
         LogResults(result);
         return result.ErrorCount > 0 ? 1 : 0;
@@ -89,7 +89,7 @@ public class CodeReviewApplication
         _logger.LogInformation("Starting pull request analysis for PR {PullRequestId} in repository {RepositoryId}",
             prId, repoId);
 
-        var result = await _codeReviewService.AnalyzePullRequestAsync(orgUrl, project, repoId, prId);
+        var result = await _codeReviewService.AnalyzePullRequestAsync(rulesUrl, orgUrl, project, repoId, prId);
 
         if (!result.Success)
         {
