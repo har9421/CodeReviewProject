@@ -509,16 +509,6 @@ public class AzureDevOpsService : IAzureDevOpsService
                 {
                     foreach (var change in changesEl.EnumerateArray())
                     {
-                        if (!change.TryGetProperty("item", out var item)) continue;
-                        if (!item.TryGetProperty("path", out var pathProp)) continue;
-                        var path = pathProp.GetString();
-                        if (string.IsNullOrWhiteSpace(path)) continue;
-
-                        // Skip non-supported files early
-                        var isAnalyzableFile = _options.Analysis.SupportedFileExtensions.Any(ext =>
-                            path.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
-                        if (!isAnalyzableFile) continue;
-
                         // Skip deletes
                         if (change.TryGetProperty("changeType", out var changeTypeEl))
                         {
@@ -527,7 +517,38 @@ public class AzureDevOpsService : IAzureDevOpsService
                                 continue;
                         }
 
-                        changedPaths.Add(path);
+                        // Collect potential path fields
+                        var candidates = new List<string>();
+
+                        if (change.TryGetProperty("item", out var item))
+                        {
+                            if (item.TryGetProperty("path", out var pathProp) && pathProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                                candidates.Add(pathProp.GetString() ?? string.Empty);
+                        }
+
+                        if (change.TryGetProperty("newItem", out var newItem))
+                        {
+                            if (newItem.TryGetProperty("path", out var newPathProp) && newPathProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                                candidates.Add(newPathProp.GetString() ?? string.Empty);
+                        }
+
+                        if (change.TryGetProperty("oldItem", out var oldItem))
+                        {
+                            if (oldItem.TryGetProperty("path", out var oldPathProp) && oldPathProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                                candidates.Add(oldPathProp.GetString() ?? string.Empty);
+                        }
+
+                        if (change.TryGetProperty("newPath", out var newPathEl) && newPathEl.ValueKind == System.Text.Json.JsonValueKind.String)
+                            candidates.Add(newPathEl.GetString() ?? string.Empty);
+
+                        if (change.TryGetProperty("originalPath", out var originalPathEl) && originalPathEl.ValueKind == System.Text.Json.JsonValueKind.String)
+                            candidates.Add(originalPathEl.GetString() ?? string.Empty);
+
+                        foreach (var candidate in candidates)
+                        {
+                            if (!string.IsNullOrWhiteSpace(candidate))
+                                changedPaths.Add(candidate);
+                        }
                     }
                 }
 
