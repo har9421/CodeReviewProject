@@ -563,8 +563,44 @@ public class AzureDevOpsService : IAzureDevOpsService
                         var fileResponse = await _httpClient.GetAsync(fileUrl, cancellationToken);
                         if (fileResponse.IsSuccessStatusCode)
                         {
-                            var content = await fileResponse.Content.ReadAsStringAsync(cancellationToken);
-                            result.Add((path, content));
+                            var contentType = fileResponse.Content.Headers.ContentType?.MediaType ?? string.Empty;
+                            var raw = await fileResponse.Content.ReadAsStringAsync(cancellationToken);
+
+                            string? content = null;
+                            if (contentType.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+                            {
+                                using var itemDoc = System.Text.Json.JsonDocument.Parse(raw);
+                                var root = itemDoc.RootElement;
+                                if (root.TryGetProperty("isBinary", out var isBinaryEl) && isBinaryEl.GetBoolean())
+                                {
+                                    // Skip binary files
+                                    _logger.LogDebug("Skipping binary file {Path}", path);
+                                    continue;
+                                }
+                                if (root.TryGetProperty("content", out var contentEl))
+                                {
+                                    if (root.TryGetProperty("isBase64Encoded", out var b64El) && b64El.ValueKind == System.Text.Json.JsonValueKind.True)
+                                    {
+                                        // Decode base64 content
+                                        var bytes = Convert.FromBase64String(contentEl.GetString() ?? string.Empty);
+                                        content = System.Text.Encoding.UTF8.GetString(bytes);
+                                    }
+                                    else
+                                    {
+                                        content = contentEl.GetString();
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Plain text response
+                                content = raw;
+                            }
+
+                            if (content != null)
+                            {
+                                result.Add((path, content));
+                            }
                         }
                         else
                         {
