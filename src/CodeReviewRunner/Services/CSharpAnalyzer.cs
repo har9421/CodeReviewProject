@@ -75,6 +75,44 @@ public class CSharpAnalyzer
                         }
                     }
                 }
+
+                // Type naming check: class/interface/struct should be PascalCase
+                if (appliesTo == "type_declaration")
+                {
+                    foreach (var (lineText, lineNumber, typeName) in FindTypeDeclarations(text))
+                    {
+                        if (!string.IsNullOrEmpty(typeName) && char.IsLower(typeName![0]))
+                        {
+                            issues.Add(new CodeIssue
+                            {
+                                FilePath = file,
+                                Line = lineNumber,
+                                Message = message ?? "Type names should be in PascalCase.",
+                                Severity = severity ?? "warning",
+                                RuleId = id ?? "CS001"
+                            });
+                        }
+                    }
+                }
+
+                // Method naming check: methods should be PascalCase
+                if (appliesTo == "method_declaration")
+                {
+                    foreach (var (lineText, lineNumber, methodName) in FindMethodDeclarations(text))
+                    {
+                        if (!string.IsNullOrEmpty(methodName) && char.IsLower(methodName![0]))
+                        {
+                            issues.Add(new CodeIssue
+                            {
+                                FilePath = file,
+                                Line = lineNumber,
+                                Message = message ?? "Method names should be in PascalCase.",
+                                Severity = severity ?? "warning",
+                                RuleId = id ?? "CS002"
+                            });
+                        }
+                    }
+                }
             }
         }
         return issues;
@@ -130,6 +168,44 @@ public class CSharpAnalyzer
                         }
                     }
                 }
+
+                // Type naming check: class/interface/struct should be PascalCase
+                if (appliesTo == "type_declaration")
+                {
+                    foreach (var (lineText, lineNumber, typeName) in FindTypeDeclarations(content))
+                    {
+                        if (!string.IsNullOrEmpty(typeName) && char.IsLower(typeName![0]))
+                        {
+                            issues.Add(new CodeIssue
+                            {
+                                FilePath = path,
+                                Line = lineNumber,
+                                Message = message ?? "Type names should be in PascalCase.",
+                                Severity = severity ?? "warning",
+                                RuleId = id ?? "CS001"
+                            });
+                        }
+                    }
+                }
+
+                // Method naming check: methods should be PascalCase
+                if (appliesTo == "method_declaration")
+                {
+                    foreach (var (lineText, lineNumber, methodName) in FindMethodDeclarations(content))
+                    {
+                        if (!string.IsNullOrEmpty(methodName) && char.IsLower(methodName![0]))
+                        {
+                            issues.Add(new CodeIssue
+                            {
+                                FilePath = path,
+                                Line = lineNumber,
+                                Message = message ?? "Method names should be in PascalCase.",
+                                Severity = severity ?? "warning",
+                                RuleId = id ?? "CS002"
+                            });
+                        }
+                    }
+                }
             }
         }
         return issues;
@@ -146,6 +222,40 @@ public class CSharpAnalyzer
         // Matches C# auto-properties like: public string Role { get; set; }
         // Captures the property name in group 1
         var regex = new Regex(@"\b(public|protected|internal|private)\s+[\w<>\?\[\]]+\s+(\w+)\s*\{\s*get;", RegexOptions.Compiled);
+        var lines = content.Split('\n');
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var match = regex.Match(line);
+            if (match.Success)
+            {
+                var name = match.Groups[2].Value;
+                yield return (line, i + 1, name);
+            }
+        }
+    }
+
+    private IEnumerable<(string lineText, int lineNumber, string typeName)> FindTypeDeclarations(string content)
+    {
+        // Matches: public class MyClass, public interface IThing, public struct Point
+        var regex = new Regex(@"\b(public|protected|internal|private)\s+(class|interface|struct)\s+(\w+)", RegexOptions.Compiled);
+        var lines = content.Split('\n');
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var match = regex.Match(line);
+            if (match.Success)
+            {
+                var name = match.Groups[3].Value;
+                yield return (line, i + 1, name);
+            }
+        }
+    }
+
+    private IEnumerable<(string lineText, int lineNumber, string methodName)> FindMethodDeclarations(string content)
+    {
+        // Matches methods like: public void DoWork(..., with optional generics/return types)
+        var regex = new Regex(@"\b(public|protected|internal|private)\s+[\w<>\?\[\]]+\s+(\w+)\s*\(", RegexOptions.Compiled);
         var lines = content.Split('\n');
         for (int i = 0; i < lines.Length; i++)
         {
