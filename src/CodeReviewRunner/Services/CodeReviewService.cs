@@ -29,6 +29,7 @@ public class CodeReviewService : ICodeReviewService
     }
 
     public async Task<CodeReviewResult> AnalyzePullRequestAsync(
+        string rulesUrl,
         string organization,
         string project,
         string repositoryId,
@@ -56,7 +57,7 @@ public class CodeReviewService : ICodeReviewService
 
             // Fetch rules JSON
             var ruleFetcher = new RuleFetcher();
-            var rulesJson = await ruleFetcher.FetchAsync(_options.Rules?.ValidationEnabled == true ? "coding-standards.sample.json" : "coding-standards.sample.json");
+            var rulesJson = await ruleFetcher.FetchAsync(string.IsNullOrWhiteSpace(rulesUrl) ? "coding-standards.sample.json" : rulesUrl);
 
             // Get changed files
             var changedFiles = await _azureDevOpsService.GetPullRequestChangedFilesAsync(
@@ -112,6 +113,7 @@ public class CodeReviewService : ICodeReviewService
     }
 
     public async Task<CodeReviewResult> AnalyzeLocalFilesAsync(
+        string rulesUrl,
         IEnumerable<string> filePaths,
         CancellationToken cancellationToken = default)
     {
@@ -146,10 +148,9 @@ public class CodeReviewService : ICodeReviewService
 
             result.FilesAnalyzed = files.Count;
 
-            // Analyze files
-            // Load rules for local analysis as well
+            // Analyze files with provided rules
             var ruleFetcher = new RuleFetcher();
-            var rulesJson = await ruleFetcher.FetchAsync("coding-standards.sample.json");
+            var rulesJson = await ruleFetcher.FetchAsync(string.IsNullOrWhiteSpace(rulesUrl) ? "coding-standards.sample.json" : rulesUrl);
             result.Issues = await _analysisService.AnalyzeFilesAsync(rulesJson, files, cancellationToken);
 
             result.Success = true;
