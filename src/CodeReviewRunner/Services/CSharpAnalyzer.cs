@@ -1,5 +1,6 @@
 using Newtonsoft.Json.Linq;
 using CodeReviewRunner.Models;
+using System.Text.RegularExpressions;
 
 namespace CodeReviewRunner.Services;
 
@@ -41,6 +42,7 @@ public class CSharpAnalyzer
                 var severity = (string?)rule["severity"];
                 var id = (string?)rule["id"];
 
+                // Forbidden pattern check (simple substring)
                 if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && text.Contains(pattern))
                 {
                     var line = GetLineNumber(text, pattern);
@@ -52,6 +54,26 @@ public class CSharpAnalyzer
                         Severity = severity ?? "error",
                         RuleId = id ?? "CS000"
                     });
+                }
+
+                // Property naming check: enforce PascalCase for properties
+                var appliesTo = (string?)rule["applies_to"];
+                if (appliesTo == "property_declaration")
+                {
+                    foreach (var (lineText, lineNumber, propName) in FindPropertyDeclarations(text))
+                    {
+                        if (!string.IsNullOrEmpty(propName) && char.IsLower(propName![0]))
+                        {
+                            issues.Add(new CodeIssue
+                            {
+                                FilePath = file,
+                                Line = lineNumber,
+                                Message = message ?? "Property names should be in PascalCase.",
+                                Severity = severity ?? "warning",
+                                RuleId = id ?? "CS004"
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -75,6 +97,7 @@ public class CSharpAnalyzer
                 var severity = (string?)rule["severity"];
                 var id = (string?)rule["id"];
 
+                // Forbidden pattern check (simple substring)
                 if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && content.Contains(pattern))
                 {
                     var line = GetLineNumber(content, pattern);
@@ -87,6 +110,26 @@ public class CSharpAnalyzer
                         RuleId = id ?? "CS000"
                     });
                 }
+
+                // Property naming check: enforce PascalCase for properties
+                var appliesTo = (string?)rule["applies_to"];
+                if (appliesTo == "property_declaration")
+                {
+                    foreach (var (lineText, lineNumber, propName) in FindPropertyDeclarations(content))
+                    {
+                        if (!string.IsNullOrEmpty(propName) && char.IsLower(propName![0]))
+                        {
+                            issues.Add(new CodeIssue
+                            {
+                                FilePath = path,
+                                Line = lineNumber,
+                                Message = message ?? "Property names should be in PascalCase.",
+                                Severity = severity ?? "warning",
+                                RuleId = id ?? "CS004"
+                            });
+                        }
+                    }
+                }
             }
         }
         return issues;
@@ -96,5 +139,23 @@ public class CSharpAnalyzer
     {
         var index = text.IndexOf(pattern);
         return index < 0 ? 1 : text.Substring(0, index).Split('\n').Length;
+    }
+
+    private IEnumerable<(string lineText, int lineNumber, string propertyName)> FindPropertyDeclarations(string content)
+    {
+        // Matches C# auto-properties like: public string Role { get; set; }
+        // Captures the property name in group 1
+        var regex = new Regex(@"\b(public|protected|internal|private)\s+[\w<>\?\[\]]+\s+(\w+)\s*\{\s*get;", RegexOptions.Compiled);
+        var lines = content.Split('\n');
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var match = regex.Match(line);
+            if (match.Success)
+            {
+                var name = match.Groups[2].Value;
+                yield return (line, i + 1, name);
+            }
+        }
     }
 }
