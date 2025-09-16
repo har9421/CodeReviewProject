@@ -156,9 +156,7 @@ public class ReactAnalyzer
 
         return results;
     }
-}
-
-static string ExtractEslintConfig(Newtonsoft.Json.Linq.JObject rules)
+    private static string ExtractEslintConfig(Newtonsoft.Json.Linq.JObject rules)
     {
         var direct = rules["javascript"]?["eslintOverride"]?.ToString();
         if (!string.IsNullOrWhiteSpace(direct)) return direct!;
@@ -190,3 +188,4 @@ static string ExtractEslintConfig(Newtonsoft.Json.Linq.JObject rules)
         }
         return cfg.ToString();
     }
+}
