@@ -54,6 +54,10 @@ public class CodeReviewService : ICodeReviewService
                 return result;
             }
 
+            // Fetch rules JSON
+            var ruleFetcher = new RuleFetcher();
+            var rulesJson = await ruleFetcher.FetchAsync(_options.Rules?.ValidationEnabled == true ? "coding-standards.sample.json" : "coding-standards.sample.json");
+
             // Get changed files
             var changedFiles = await _azureDevOpsService.GetPullRequestChangedFilesAsync(
                 organization, project, repositoryId, pullRequestId, cancellationToken);
@@ -80,7 +84,7 @@ public class CodeReviewService : ICodeReviewService
             }
 
             // Analyze files
-            result.Issues = await _analysisService.AnalyzeFilesAsync(supportedFiles, cancellationToken);
+            result.Issues = await _analysisService.AnalyzeFilesAsync(rulesJson, supportedFiles, cancellationToken);
 
             result.Success = true;
             _logger.LogInformation("Analysis completed. Found {IssueCount} issues in {FileCount} files",
