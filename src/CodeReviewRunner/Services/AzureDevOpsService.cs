@@ -253,6 +253,7 @@ public class AzureDevOpsService : IAzureDevOpsService
             : null;
 
         var commentCount = 0;
+        var postedThisRun = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var issue in issues.Take(_options.Notifications.MaxCommentsPerFile))
         {
             // Compute repo-relative normalized path, avoid traversals
@@ -303,11 +304,19 @@ public class AzureDevOpsService : IAzureDevOpsService
                 continue;
             }
 
+            // Skip duplicates within this run, too
+            if (postedThisRun.Contains(key))
+            {
+                _logger.LogDebug("Skip same-run duplicate for {Path} line {Line}", relativePath, issue.Line);
+                continue;
+            }
+
             var response = await _httpClient.PostAsync(url, new StringContent(json, System.Text.Encoding.UTF8, "application/json"), cancellationToken);
             _logger.LogDebug("Post comment on {RelativePath} line {Line}: {StatusCode}", relativePath, issue.Line, response.StatusCode);
             if (response.IsSuccessStatusCode)
             {
                 existing.Add(key);
+                postedThisRun.Add(key);
             }
             commentCount++;
         }
