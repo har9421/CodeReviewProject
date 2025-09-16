@@ -102,7 +102,7 @@ public class AzureDevOpsService : IAzureDevOpsService
                         // Only handling commits flow
                         if (url.Contains("/commits"))
                         {
-                            return await ProcessPullRequestCommits(organization, project, repositoryId, response, cancellationToken);
+                            return await ProcessPullRequestCommits(organization, project, repositoryId, pullRequestId, response, cancellationToken);
                         }
                         else
                         {
@@ -437,6 +437,7 @@ public class AzureDevOpsService : IAzureDevOpsService
         string organization,
         string project,
         string repositoryId,
+        string pullRequestId,
         HttpResponseMessage response,
         CancellationToken cancellationToken)
     {
@@ -465,7 +466,7 @@ public class AzureDevOpsService : IAzureDevOpsService
                             firstCommitId.GetString(), lastCommitId.GetString());
 
                         // Try to get the diff between commits
-                        var changes = await GetChangesBetweenCommits(organization, project, repositoryId, firstCommitId.GetString()!, lastCommitId.GetString()!, cancellationToken);
+                        var changes = await GetChangesBetweenCommits(organization, project, repositoryId, pullRequestId, firstCommitId.GetString()!, lastCommitId.GetString()!, cancellationToken);
                         result.AddRange(changes);
                     }
                 }
@@ -485,6 +486,7 @@ public class AzureDevOpsService : IAzureDevOpsService
         string organization,
         string project,
         string repositoryId,
+        string pullRequestId,
         string fromCommit,
         string toCommit,
         CancellationToken cancellationToken)
@@ -568,6 +570,15 @@ public class AzureDevOpsService : IAzureDevOpsService
             }
 
             _logger.LogInformation("Found changes in diff");
+            if (changedPaths.Count == 0)
+            {
+                _logger.LogInformation("No paths from commit diff; falling back to PR iterations changes");
+                var iterFiles = await GetChangedFilesFromIterations(organization, project, repositoryId, pullRequestId, cancellationToken);
+                if (iterFiles.Any())
+                {
+                    changedPaths.AddRange(iterFiles);
+                }
+            }
 
             foreach (var path in changedPaths.Distinct(StringComparer.OrdinalIgnoreCase))
             {
@@ -630,6 +641,61 @@ public class AzureDevOpsService : IAzureDevOpsService
         {
             _logger.LogError(ex, "Error getting changes between commits");
             return new List<(string path, string content)>();
+        }
+    }
+
+    private async Task<List<string>> GetChangedFilesFromIterations(
+        string organization,
+        string project,
+        string repositoryId,
+        string pullRequestId,
+        CancellationToken cancellationToken)
+    {
+        var paths = new List<string>();
+        try
+        {
+            var iterationsUrl = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/iterations?api-version={_options.AzureDevOps.ApiVersion}";
+            var resp = await _httpClient.GetAsync(iterationsUrl, cancellationToken);
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to list iterations: {Status}", resp.StatusCode);
+                return paths;
+            }
+
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("value", out var arr) || arr.GetArrayLength() == 0)
+                return paths;
+
+            var lastIterationId = arr.EnumerateArray().Select(e => e.GetProperty("id").GetInt32()).DefaultIfEmpty().Max();
+            var changesUrl = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/iterations/{lastIterationId}/changes?api-version={_options.AzureDevOps.ApiVersion}";
+            var changesResp = await _httpClient.GetAsync(changesUrl, cancellationToken);
+            if (!changesResp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to get iteration changes: {Status}", changesResp.StatusCode);
+                return paths;
+            }
+
+            var changesJson = await changesResp.Content.ReadAsStringAsync(cancellationToken);
+            using var changesDoc = System.Text.Json.JsonDocument.Parse(changesJson);
+            if (changesDoc.RootElement.TryGetProperty("changeEntries", out var entries))
+            {
+                foreach (var e in entries.EnumerateArray())
+                {
+                    if (e.TryGetProperty("item", out var item) && item.TryGetProperty("path", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        if (e.TryGetProperty("changeType", out var ct) && string.Equals(ct.GetString(), "delete", StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        paths.Add(p.GetString() ?? string.Empty);
+                    }
+                }
+            }
+            return paths;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Iteration fallback failed");
+            return paths;
         }
     }
 
