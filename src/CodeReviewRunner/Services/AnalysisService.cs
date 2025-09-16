@@ -29,6 +29,8 @@ public class AnalysisService : IAnalysisService
         IEnumerable<(string path, string content)> files,
         CancellationToken cancellationToken = default)
     {
+        // Ensure we have a minimum set of C# rules if none are provided in expected schema
+        rules = EnsureCSharpDefaultRules(rules);
         var csharpFiles = files.Where(f => f.path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)).ToList();
 
         if (!csharpFiles.Any())
@@ -60,6 +62,8 @@ public class AnalysisService : IAnalysisService
         IEnumerable<(string path, string content)> files,
         CancellationToken cancellationToken = default)
     {
+        // Ensure minimal C# rules if needed
+        rules = EnsureCSharpDefaultRules(rules);
         var allIssues = new List<CodeIssue>();
 
         // Analyze C# files only
@@ -68,5 +72,84 @@ public class AnalysisService : IAnalysisService
 
         _logger.LogInformation("Total analysis completed: {TotalIssues} issues found", allIssues.Count);
         return allIssues;
+    }
+
+    private static Newtonsoft.Json.Linq.JObject EnsureCSharpDefaultRules(Newtonsoft.Json.Linq.JObject rules)
+    {
+        var hasCsharp = rules["csharp"]?["rules"] is Newtonsoft.Json.Linq.JArray csharpArr && csharpArr.Count > 0;
+        var hasTop = rules["rules"] is Newtonsoft.Json.Linq.JArray topArr && topArr.Any(r =>
+            (r["languages"] as Newtonsoft.Json.Linq.JArray)?.Any(l => string.Equals((string?)l, "csharp", StringComparison.OrdinalIgnoreCase)) == true);
+
+        if (hasCsharp || hasTop)
+            return rules;
+
+        // Inject minimal defaults to catch common cases
+        var defaults = new Newtonsoft.Json.Linq.JObject
+        {
+            ["csharp"] = new Newtonsoft.Json.Linq.JObject
+            {
+                ["rules"] = new Newtonsoft.Json.Linq.JArray
+                {
+                    new Newtonsoft.Json.Linq.JObject
+                    {
+                        ["id"] = "CS026",
+                        ["type"] = "forbidden",
+                        ["pattern"] = "Console.WriteLine",
+                        ["message"] = "Avoid Console.WriteLine in production; use logging framework.",
+                        ["severity"] = "error"
+                    },
+                    new Newtonsoft.Json.Linq.JObject
+                    {
+                        ["id"] = "CS004",
+                        ["type"] = "style",
+                        ["applies_to"] = "property_declaration",
+                        ["message"] = "Property names should be in PascalCase.",
+                        ["severity"] = "warning"
+                    },
+                    new Newtonsoft.Json.Linq.JObject
+                    {
+                        ["id"] = "CS002",
+                        ["type"] = "style",
+                        ["applies_to"] = "method_declaration",
+                        ["message"] = "Method names should be in PascalCase.",
+                        ["severity"] = "warning"
+                    },
+                    new Newtonsoft.Json.Linq.JObject
+                    {
+                        ["id"] = "CS001",
+                        ["type"] = "style",
+                        ["applies_to"] = "type_declaration",
+                        ["message"] = "Type names should be in PascalCase.",
+                        ["severity"] = "warning"
+                    },
+                    new Newtonsoft.Json.Linq.JObject
+                    {
+                        ["id"] = "CS005",
+                        ["type"] = "style",
+                        ["applies_to"] = "field_declaration",
+                        ["message"] = "Constants should be in ALL_CAPS with underscores.",
+                        ["severity"] = "warning"
+                    },
+                    new Newtonsoft.Json.Linq.JObject
+                    {
+                        ["id"] = "CS007",
+                        ["type"] = "style",
+                        ["applies_to"] = "field_declaration",
+                        ["message"] = "Private fields should be in camelCase and prefixed with '_'.",
+                        ["severity"] = "warning"
+                    },
+                    new Newtonsoft.Json.Linq.JObject
+                    {
+                        ["id"] = "CS008",
+                        ["type"] = "style",
+                        ["applies_to"] = "method_declaration",
+                        ["message"] = "Async methods should end with 'Async' suffix.",
+                        ["severity"] = "warning"
+                    }
+                }
+            }
+        };
+
+        return defaults;
     }
 }
