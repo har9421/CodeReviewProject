@@ -357,9 +357,13 @@ public class CSharpAnalyzer
 
     private IEnumerable<(string lineText, int lineNumber, string propertyName)> FindPropertyDeclarations(string content)
     {
-        // Robust match for auto-properties possibly with attributes and spacing
+        // Match properties with get/set/init in any format, including attributes and spacing
+        // Examples:
+        // public string role { get; set; }
+        // public string Role { get; init; }
+        // [Attr]\npublic int Count { get { return _c; } set { _c = value; } }
         var regex = new Regex(
-            @"(?m)^[\t ]*(?:\[[^\]]*\][\t ]*)*(public|protected|internal|private)[\t ]+(?:static[\t ]+)?[\w<>\?\[\],\t ]+[\t ]+(\w+)[\t ]*\{[\t ]*get\b",
+            @"(?ms)^[\t ]*(?:\[[^\]]*\][\t ]*)*(public|protected|internal|private)[\t ]+(?:static[\t ]+)?[\w<>\?\[\],\t ]+[\t ]+(\w+)[\t ]*\{[^}]*\b(get|set|init)\b[\s\S]*?\}",
             RegexOptions.Compiled);
 
         foreach (Match match in regex.Matches(content))

@@ -206,6 +206,48 @@ public class AzureDevOpsService : IAzureDevOpsService
 
         var url = $"{organization}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/threads?api-version=6.0";
 
+        // Load existing threads to avoid duplicate comments
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var existingResp = await _httpClient.GetAsync(url, cancellationToken);
+            if (existingResp.IsSuccessStatusCode)
+            {
+                var existingJson = await existingResp.Content.ReadAsStringAsync(cancellationToken);
+                using var existingDoc = System.Text.Json.JsonDocument.Parse(existingJson);
+                if (existingDoc.RootElement.TryGetProperty("value", out var threadsEl))
+                {
+                    foreach (var thread in threadsEl.EnumerateArray())
+                    {
+                        string? path = null;
+                        int? line = null;
+                        if (thread.TryGetProperty("threadContext", out var ctx))
+                        {
+                            if (ctx.TryGetProperty("filePath", out var fp) && fp.ValueKind == System.Text.Json.JsonValueKind.String)
+                                path = fp.GetString();
+                            if (ctx.TryGetProperty("rightFileStart", out var rfs) && rfs.TryGetProperty("line", out var le))
+                                line = le.GetInt32();
+                        }
+                        if (thread.TryGetProperty("comments", out var commentsArr))
+                        {
+                            foreach (var c in commentsArr.EnumerateArray())
+                            {
+                                var content = c.TryGetProperty("content", out var ce) && ce.ValueKind == System.Text.Json.JsonValueKind.String ? ce.GetString() : null;
+                                if (!string.IsNullOrEmpty(path) && line.HasValue && !string.IsNullOrEmpty(content))
+                                {
+                                    existing.Add($"{path}|{line.Value}|{content}");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed loading existing PR threads for dedup");
+        }
+
         var allowedSet = allowedFilePaths != null
             ? new HashSet<string>(allowedFilePaths.Select(p => NormalizeForCompare(repositoryPath, p)), StringComparer.OrdinalIgnoreCase)
             : null;
@@ -213,11 +255,14 @@ public class AzureDevOpsService : IAzureDevOpsService
         var commentCount = 0;
         foreach (var issue in issues.Take(_options.Notifications.MaxCommentsPerFile))
         {
-            var relativePath = Path.DirectorySeparatorChar == '/'
-                ? Path.GetRelativePath(repositoryPath, issue.FilePath)
-                : Path.GetRelativePath(repositoryPath, issue.FilePath).Replace('\\', '/');
-            if (!relativePath.StartsWith('/'))
-                relativePath = "/" + relativePath;
+            // Compute repo-relative normalized path, avoid traversals
+            var rel = Path.GetRelativePath(repositoryPath, issue.FilePath).Replace('\\', '/');
+            if (rel.StartsWith("../"))
+            {
+                // Fall back to using the tail from original path in repo-style format
+                rel = issue.FilePath.Replace('\\', '/').TrimStart('/');
+            }
+            var relativePath = rel.StartsWith('/') ? rel : "/" + rel;
 
             if (allowedSet != null)
             {
@@ -248,8 +293,22 @@ public class AzureDevOpsService : IAzureDevOpsService
             };
 
             var json = System.Text.Json.JsonSerializer.Serialize(body);
+
+            // Skip duplicate if same path/line/content already exists
+            var contentText = $"{issue.Severity.ToUpper()}: {issue.Message} (rule {issue.RuleId})";
+            var key = $"{relativePath}|{issue.Line}|{contentText}";
+            if (existing.Contains(key))
+            {
+                _logger.LogDebug("Skip duplicate comment for {Path} line {Line}", relativePath, issue.Line);
+                continue;
+            }
+
             var response = await _httpClient.PostAsync(url, new StringContent(json, System.Text.Encoding.UTF8, "application/json"), cancellationToken);
             _logger.LogDebug("Post comment on {RelativePath} line {Line}: {StatusCode}", relativePath, issue.Line, response.StatusCode);
+            if (response.IsSuccessStatusCode)
+            {
+                existing.Add(key);
+            }
             commentCount++;
         }
 
