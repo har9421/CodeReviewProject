@@ -147,7 +147,10 @@ public class CodeReviewService : ICodeReviewService
             result.FilesAnalyzed = files.Count;
 
             // Analyze files
-            result.Issues = await _analysisService.AnalyzeFilesAsync(files, cancellationToken);
+            // Load rules for local analysis as well
+            var ruleFetcher = new RuleFetcher();
+            var rulesJson = await ruleFetcher.FetchAsync("coding-standards.sample.json");
+            result.Issues = await _analysisService.AnalyzeFilesAsync(rulesJson, files, cancellationToken);
 
             result.Success = true;
             _logger.LogInformation("Local analysis completed. Found {IssueCount} issues in {FileCount} files",
