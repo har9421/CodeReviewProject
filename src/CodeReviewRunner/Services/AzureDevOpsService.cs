@@ -491,20 +491,26 @@ public class AzureDevOpsService : IAzureDevOpsService
     {
         try
         {
-            // Try to get the diff between commits
-            var diffUrl = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/diffs/commits?baseVersion={fromCommit}&baseVersionType=commit&targetVersion={toCommit}&targetVersionType=commit&api-version={_options.AzureDevOps.ApiVersion}";
-            _logger.LogInformation("Getting diff between commits: {DiffUrl}", diffUrl);
-
-            var response = await _httpClient.GetAsync(diffUrl, cancellationToken);
-            if (response.IsSuccessStatusCode)
+            // Page through diff to collect all results
+            var result = new List<(string path, string content)>();
+            var changedPaths = new List<string>();
+            const int pageSize = 200;
+            var skip = 0;
+            while (true)
             {
+                var pagedUrl = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/diffs/commits?baseVersion={fromCommit}&baseVersionType=commit&targetVersion={toCommit}&targetVersionType=commit&$top={pageSize}&$skip={skip}&api-version={_options.AzureDevOps.ApiVersion}";
+                _logger.LogInformation("Getting diff between commits: {DiffUrl}", pagedUrl);
+                var response = await _httpClient.GetAsync(pagedUrl, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Failed to get diff page: {StatusCode}", response.StatusCode);
+                    break;
+                }
+
                 var json = await response.Content.ReadAsStringAsync(cancellationToken);
                 using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var addedThisPage = 0;
 
-                var result = new List<(string path, string content)>();
-                var changedPaths = new List<string>();
-
-                // Parse actual changed paths from diff response
                 if (doc.RootElement.TryGetProperty("changes", out var changesEl))
                 {
                     foreach (var change in changesEl.EnumerateArray())
@@ -517,109 +523,108 @@ public class AzureDevOpsService : IAzureDevOpsService
                                 continue;
                         }
 
-                        // Collect potential path fields
                         var candidates = new List<string>();
-
                         if (change.TryGetProperty("item", out var item))
                         {
                             if (item.TryGetProperty("path", out var pathProp) && pathProp.ValueKind == System.Text.Json.JsonValueKind.String)
                                 candidates.Add(pathProp.GetString() ?? string.Empty);
                         }
-
                         if (change.TryGetProperty("newItem", out var newItem))
                         {
                             if (newItem.TryGetProperty("path", out var newPathProp) && newPathProp.ValueKind == System.Text.Json.JsonValueKind.String)
                                 candidates.Add(newPathProp.GetString() ?? string.Empty);
                         }
-
                         if (change.TryGetProperty("oldItem", out var oldItem))
                         {
                             if (oldItem.TryGetProperty("path", out var oldPathProp) && oldPathProp.ValueKind == System.Text.Json.JsonValueKind.String)
                                 candidates.Add(oldPathProp.GetString() ?? string.Empty);
                         }
-
                         if (change.TryGetProperty("newPath", out var newPathEl) && newPathEl.ValueKind == System.Text.Json.JsonValueKind.String)
                             candidates.Add(newPathEl.GetString() ?? string.Empty);
-
                         if (change.TryGetProperty("originalPath", out var originalPathEl) && originalPathEl.ValueKind == System.Text.Json.JsonValueKind.String)
                             candidates.Add(originalPathEl.GetString() ?? string.Empty);
 
                         foreach (var candidate in candidates)
                         {
                             if (!string.IsNullOrWhiteSpace(candidate))
+                            {
                                 changedPaths.Add(candidate);
+                                addedThisPage++;
+                            }
                         }
                     }
                 }
-
-                _logger.LogInformation("Found changes in diff");
-
-                // Fetch actual contents for each changed file at the target commit
-                foreach (var path in changedPaths.Distinct(StringComparer.OrdinalIgnoreCase))
+                else
                 {
-                    var fileUrl = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/items?path={Uri.EscapeDataString(path)}&versionDescriptor.version={toCommit}&versionDescriptor.versionType=commit&includeContent=true&resolveLfs=true&api-version={_options.AzureDevOps.ApiVersion}";
-                    try
+                    _logger.LogDebug("Unexpected diff schema. Sample: {Sample}", json.Length > 500 ? json.Substring(0, 500) + "..." : json);
+                    break;
+                }
+
+                if (addedThisPage < pageSize)
+                {
+                    break;
+                }
+                skip += pageSize;
+            }
+
+            _logger.LogInformation("Found changes in diff");
+
+            foreach (var path in changedPaths.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                var fileUrl = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/items?path={Uri.EscapeDataString(path)}&versionDescriptor.version={toCommit}&versionDescriptor.versionType=commit&includeContent=true&resolveLfs=true&api-version={_options.AzureDevOps.ApiVersion}";
+                try
+                {
+                    var fileResponse = await _httpClient.GetAsync(fileUrl, cancellationToken);
+                    if (fileResponse.IsSuccessStatusCode)
                     {
-                        var fileResponse = await _httpClient.GetAsync(fileUrl, cancellationToken);
-                        if (fileResponse.IsSuccessStatusCode)
+                        var contentType = fileResponse.Content.Headers.ContentType?.MediaType ?? string.Empty;
+                        var raw = await fileResponse.Content.ReadAsStringAsync(cancellationToken);
+
+                        string? content = null;
+                        if (contentType.Contains("application/json", StringComparison.OrdinalIgnoreCase))
                         {
-                            var contentType = fileResponse.Content.Headers.ContentType?.MediaType ?? string.Empty;
-                            var raw = await fileResponse.Content.ReadAsStringAsync(cancellationToken);
-
-                            string? content = null;
-                            if (contentType.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+                            using var itemDoc = System.Text.Json.JsonDocument.Parse(raw);
+                            var root = itemDoc.RootElement;
+                            if (root.TryGetProperty("isBinary", out var isBinaryEl) && isBinaryEl.GetBoolean())
                             {
-                                using var itemDoc = System.Text.Json.JsonDocument.Parse(raw);
-                                var root = itemDoc.RootElement;
-                                if (root.TryGetProperty("isBinary", out var isBinaryEl) && isBinaryEl.GetBoolean())
-                                {
-                                    // Skip binary files
-                                    _logger.LogDebug("Skipping binary file {Path}", path);
-                                    continue;
-                                }
-                                if (root.TryGetProperty("content", out var contentEl))
-                                {
-                                    if (root.TryGetProperty("isBase64Encoded", out var b64El) && b64El.ValueKind == System.Text.Json.JsonValueKind.True)
-                                    {
-                                        // Decode base64 content
-                                        var bytes = Convert.FromBase64String(contentEl.GetString() ?? string.Empty);
-                                        content = System.Text.Encoding.UTF8.GetString(bytes);
-                                    }
-                                    else
-                                    {
-                                        content = contentEl.GetString();
-                                    }
-                                }
+                                _logger.LogDebug("Skipping binary file {Path}", path);
+                                continue;
                             }
-                            else
+                            if (root.TryGetProperty("content", out var contentEl))
                             {
-                                // Plain text response
-                                content = raw;
-                            }
-
-                            if (content != null)
-                            {
-                                result.Add((path, content));
+                                if (root.TryGetProperty("isBase64Encoded", out var b64El) && b64El.ValueKind == System.Text.Json.JsonValueKind.True)
+                                {
+                                    var bytes = Convert.FromBase64String(contentEl.GetString() ?? string.Empty);
+                                    content = System.Text.Encoding.UTF8.GetString(bytes);
+                                }
+                                else
+                                {
+                                    content = contentEl.GetString();
+                                }
                             }
                         }
                         else
                         {
-                            _logger.LogDebug("Could not fetch content for {Path}: {Status}", path, fileResponse.StatusCode);
+                            content = raw;
+                        }
+
+                        if (content != null)
+                        {
+                            result.Add((path, content));
                         }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        _logger.LogDebug(ex, "Exception fetching content for {Path}", path);
+                        _logger.LogDebug("Could not fetch content for {Path}: {Status}", path, fileResponse.StatusCode);
                     }
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Exception fetching content for {Path}", path);
+                }
+            }
 
-                return result;
-            }
-            else
-            {
-                _logger.LogWarning("Failed to get diff between commits: {StatusCode}", response.StatusCode);
-                return new List<(string path, string content)>();
-            }
+            return result;
         }
         catch (Exception ex)
         {
