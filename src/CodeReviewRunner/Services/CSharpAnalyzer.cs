@@ -43,7 +43,7 @@ public class CSharpAnalyzer
                 var id = (string?)rule["id"];
 
                 // Forbidden pattern check (simple substring)
-                if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && text.Contains(pattern))
+                if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && text.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     var line = GetLineNumber(text, pattern);
                     issues.Add(new CodeIssue
@@ -98,7 +98,7 @@ public class CSharpAnalyzer
                 // Method naming check: methods should be PascalCase
                 if (appliesTo == "method_declaration")
                 {
-                    foreach (var (lineText, lineNumber, methodName) in FindMethodDeclarations(text))
+                    foreach (var (lineText, lineNumber, methodName, isAsync) in FindMethodDeclarations(text))
                     {
                         if (!string.IsNullOrEmpty(methodName) && char.IsLower(methodName![0]))
                         {
@@ -110,6 +110,62 @@ public class CSharpAnalyzer
                                 Severity = severity ?? "warning",
                                 RuleId = id ?? "CS002"
                             });
+                        }
+
+                        // Async suffix check when method is async (CS008)
+                        if (isAsync && (string.Equals(id, "CS008", StringComparison.OrdinalIgnoreCase) || (message?.Contains("Async", StringComparison.OrdinalIgnoreCase) ?? false)))
+                        {
+                            if (!methodName.EndsWith("Async", StringComparison.Ordinal))
+                            {
+                                issues.Add(new CodeIssue
+                                {
+                                    FilePath = file,
+                                    Line = lineNumber,
+                                    Message = message ?? "Async methods should end with 'Async' suffix.",
+                                    Severity = severity ?? "warning",
+                                    RuleId = id ?? "CS008"
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Field rules (constants and private field naming)
+                if (appliesTo == "field_declaration")
+                {
+                    foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate) in FindFieldDeclarations(text))
+                    {
+                        // Constants ALL_CAPS (CS005)
+                        if (isConst && (string.Equals(id, "CS005", StringComparison.OrdinalIgnoreCase) || (message?.Contains("Constants", StringComparison.OrdinalIgnoreCase) ?? false)))
+                        {
+                            if (!(fieldName.All(c => c == '_' || char.IsDigit(c) || char.IsUpper(c))))
+                            {
+                                issues.Add(new CodeIssue
+                                {
+                                    FilePath = file,
+                                    Line = lineNumber,
+                                    Message = message ?? "Constants should be in ALL_CAPS with underscores.",
+                                    Severity = severity ?? "warning",
+                                    RuleId = id ?? "CS005"
+                                });
+                            }
+                        }
+
+                        // Private fields underscore camelCase (CS007)
+                        if (isPrivate && !isConst && (string.Equals(id, "CS007", StringComparison.OrdinalIgnoreCase) || (message?.Contains("Private fields", StringComparison.OrdinalIgnoreCase) ?? false)))
+                        {
+                            var valid = fieldName.StartsWith("_") && fieldName.Length > 1 && char.IsLower(fieldName[1]);
+                            if (!valid)
+                            {
+                                issues.Add(new CodeIssue
+                                {
+                                    FilePath = file,
+                                    Line = lineNumber,
+                                    Message = message ?? "Private fields should be in camelCase and prefixed with '_'.",
+                                    Severity = severity ?? "warning",
+                                    RuleId = id ?? "CS007"
+                                });
+                            }
                         }
                     }
                 }
@@ -136,7 +192,7 @@ public class CSharpAnalyzer
                 var id = (string?)rule["id"];
 
                 // Forbidden pattern check (simple substring)
-                if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && content.Contains(pattern))
+                if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && content.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     var line = GetLineNumber(content, pattern);
                     issues.Add(new CodeIssue
@@ -191,7 +247,7 @@ public class CSharpAnalyzer
                 // Method naming check: methods should be PascalCase
                 if (appliesTo == "method_declaration")
                 {
-                    foreach (var (lineText, lineNumber, methodName) in FindMethodDeclarations(content))
+                    foreach (var (lineText, lineNumber, methodName, isAsync) in FindMethodDeclarations(content))
                     {
                         if (!string.IsNullOrEmpty(methodName) && char.IsLower(methodName![0]))
                         {
@@ -203,6 +259,62 @@ public class CSharpAnalyzer
                                 Severity = severity ?? "warning",
                                 RuleId = id ?? "CS002"
                             });
+                        }
+
+                        // Async suffix check when method is async (CS008)
+                        if (isAsync && (string.Equals(id, "CS008", StringComparison.OrdinalIgnoreCase) || (message?.Contains("Async", StringComparison.OrdinalIgnoreCase) ?? false)))
+                        {
+                            if (!methodName.EndsWith("Async", StringComparison.Ordinal))
+                            {
+                                issues.Add(new CodeIssue
+                                {
+                                    FilePath = path,
+                                    Line = lineNumber,
+                                    Message = message ?? "Async methods should end with 'Async' suffix.",
+                                    Severity = severity ?? "warning",
+                                    RuleId = id ?? "CS008"
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Field rules (constants and private field naming)
+                if (appliesTo == "field_declaration")
+                {
+                    foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate) in FindFieldDeclarations(content))
+                    {
+                        // Constants ALL_CAPS (CS005)
+                        if (isConst && (string.Equals(id, "CS005", StringComparison.OrdinalIgnoreCase) || (message?.Contains("Constants", StringComparison.OrdinalIgnoreCase) ?? false)))
+                        {
+                            if (!(fieldName.All(c => c == '_' || char.IsDigit(c) || char.IsUpper(c))))
+                            {
+                                issues.Add(new CodeIssue
+                                {
+                                    FilePath = path,
+                                    Line = lineNumber,
+                                    Message = message ?? "Constants should be in ALL_CAPS with underscores.",
+                                    Severity = severity ?? "warning",
+                                    RuleId = id ?? "CS005"
+                                });
+                            }
+                        }
+
+                        // Private fields underscore camelCase (CS007)
+                        if (isPrivate && !isConst && (string.Equals(id, "CS007", StringComparison.OrdinalIgnoreCase) || (message?.Contains("Private fields", StringComparison.OrdinalIgnoreCase) ?? false)))
+                        {
+                            var valid = fieldName.StartsWith("_") && fieldName.Length > 1 && char.IsLower(fieldName[1]);
+                            if (!valid)
+                            {
+                                issues.Add(new CodeIssue
+                                {
+                                    FilePath = path,
+                                    Line = lineNumber,
+                                    Message = message ?? "Private fields should be in camelCase and prefixed with '_'.",
+                                    Severity = severity ?? "warning",
+                                    RuleId = id ?? "CS007"
+                                });
+                            }
                         }
                     }
                 }
@@ -276,10 +388,10 @@ public class CSharpAnalyzer
         }
     }
 
-    private IEnumerable<(string lineText, int lineNumber, string methodName)> FindMethodDeclarations(string content)
+    private IEnumerable<(string lineText, int lineNumber, string methodName, bool isAsync)> FindMethodDeclarations(string content)
     {
         // Matches methods like: public void DoWork(..., with optional generics/return types)
-        var regex = new Regex(@"\b(public|protected|internal|private)\s+[\w<>\?\[\]]+\s+(\w+)\s*\(", RegexOptions.Compiled);
+        var regex = new Regex(@"\b(public|protected|internal|private)\s+(async\s+)?[\w<>\?\[\]]+\s+(\w+)\s*\(", RegexOptions.Compiled);
         var lines = content.Split('\n');
         for (int i = 0; i < lines.Length; i++)
         {
@@ -287,8 +399,30 @@ public class CSharpAnalyzer
             var match = regex.Match(line);
             if (match.Success)
             {
-                var name = match.Groups[2].Value;
-                yield return (line, i + 1, name);
+                var isAsync = !string.IsNullOrEmpty(match.Groups[2].Value);
+                var name = match.Groups[3].Value;
+                yield return (line, i + 1, name, isAsync);
+            }
+        }
+    }
+
+    private IEnumerable<(string lineText, int lineNumber, string fieldName, bool isConst, bool isPrivate)> FindFieldDeclarations(string content)
+    {
+        // Matches fields like: private const int MAX; private string _name; public static readonly int X;
+        var regex = new Regex(@"\b(public|protected|internal|private)\s+((?:static|readonly|const)\s+)*[\w<>\?\[\]]+\s+(\w+)\s*;", RegexOptions.Compiled);
+        var lines = content.Split('\n');
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var match = regex.Match(line);
+            if (match.Success)
+            {
+                var access = match.Groups[1].Value;
+                var mods = match.Groups[2].Value;
+                var name = match.Groups[3].Value;
+                var isConst = mods?.Contains("const") == true;
+                var isPrivate = string.Equals(access, "private", StringComparison.OrdinalIgnoreCase);
+                yield return (line, i + 1, name, isConst, isPrivate);
             }
         }
     }

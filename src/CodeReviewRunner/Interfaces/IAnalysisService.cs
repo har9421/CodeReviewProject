@@ -10,11 +10,6 @@ public interface IAnalysisService
         IEnumerable<(string path, string content)> files,
         CancellationToken cancellationToken = default);
 
-    Task<List<CodeIssue>> AnalyzeJavaScriptFilesAsync(
-        JObject rules,
-        IEnumerable<(string path, string content)> files,
-        CancellationToken cancellationToken = default);
-
     Task<List<CodeIssue>> AnalyzeFilesAsync(
         JObject rules,
         IEnumerable<(string path, string content)> files,
