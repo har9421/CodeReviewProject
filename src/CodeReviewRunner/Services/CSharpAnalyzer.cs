@@ -245,19 +245,17 @@ public class CSharpAnalyzer
 
     private IEnumerable<(string lineText, int lineNumber, string propertyName)> FindPropertyDeclarations(string content)
     {
-        // Matches C# auto-properties like: public string Role { get; set; }
-        // Captures the property name in group 1
-        var regex = new Regex(@"\b(public|protected|internal|private)\s+[\w<>\?\[\]]+\s+(\w+)\s*\{\s*get;", RegexOptions.Compiled);
-        var lines = content.Split('\n');
-        for (int i = 0; i < lines.Length; i++)
+        // Robust match for auto-properties possibly with attributes and spacing
+        var regex = new Regex(
+            @"(?m)^[\t ]*(?:\[[^\]]*\][\t ]*)*(public|protected|internal|private)[\t ]+(?:static[\t ]+)?[\w<>\?\[\],\t ]+[\t ]+(\w+)[\t ]*\{[\t ]*get\b",
+            RegexOptions.Compiled);
+
+        foreach (Match match in regex.Matches(content))
         {
-            var line = lines[i];
-            var match = regex.Match(line);
-            if (match.Success)
-            {
-                var name = match.Groups[2].Value;
-                yield return (line, i + 1, name);
-            }
+            var name = match.Groups[2].Value;
+            var lineNumber = GetLineNumberByIndex(content, match.Index);
+            var lineText = GetLineTextAtIndex(content, match.Index);
+            yield return (lineText, lineNumber, name);
         }
     }
 
@@ -293,5 +291,21 @@ public class CSharpAnalyzer
                 yield return (line, i + 1, name);
             }
         }
+    }
+
+    private int GetLineNumberByIndex(string text, int index)
+    {
+        if (index <= 0) return 1;
+        var segment = index >= text.Length ? text : text.Substring(0, index);
+        return segment.Split('\n').Length;
+    }
+
+    private string GetLineTextAtIndex(string text, int index)
+    {
+        var start = text.LastIndexOf('\n', index >= text.Length ? text.Length - 1 : index);
+        var end = text.IndexOf('\n', index);
+        if (start < 0) start = -1;
+        if (end < 0) end = text.Length;
+        return text.Substring(start + 1, end - start - 1);
     }
 }
