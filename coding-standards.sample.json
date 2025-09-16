@@ -29,15 +29,28 @@
         "applies_to": "type_declaration",
         "message": "Type names should be in PascalCase.",
         "severity": "warning"
+      },
+      {
+        "id": "CS005",
+        "type": "style",
+        "applies_to": "field_declaration",
+        "message": "Constants should be in ALL_CAPS with underscores.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS007",
+        "type": "style",
+        "applies_to": "field_declaration",
+        "message": "Private fields should be in camelCase and prefixed with '_'.",
+        "severity": "warning"
+      },
+      {
+        "id": "CS008",
+        "type": "style",
+        "applies_to": "method_declaration",
+        "message": "Async methods should end with 'Async' suffix.",
+        "severity": "warning"
       }
     ]
-},
-  "javascript": {
-    "eslintOverride": {
-      "rules": {
-        "no-console": "error",
-        "camelcase": "warn"
-      }
-    }
   }
 }
