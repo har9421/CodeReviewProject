@@ -99,14 +99,20 @@ public class CodeReviewApplication
 
         LogResults(result);
 
+        // De-duplicate issues (same file, line, rule, message)
+        var distinctIssues = result.Issues
+            .GroupBy(i => (i.FilePath, i.Line, i.RuleId, i.Message))
+            .Select(g => g.First())
+            .ToList();
+
         // Post comments to Azure DevOps if enabled
-        if (_options.Notifications.EnableComments && result.Issues.Any())
+        if (_options.Notifications.EnableComments && distinctIssues.Any())
         {
             try
             {
                 await _azureDevOpsService.PostCommentsAsync(
-                    orgUrl, project, repoId, prId, repoPath, result.Issues);
-                _logger.LogInformation("Posted {CommentCount} comments to Azure DevOps", result.Issues.Count);
+                    orgUrl, project, repoId, prId, repoPath, distinctIssues);
+                _logger.LogInformation("Posted {CommentCount} comments to Azure DevOps", distinctIssues.Count);
             }
             catch (Exception ex)
             {
@@ -115,12 +121,12 @@ public class CodeReviewApplication
         }
 
         // Post summary if enabled
-        if (_options.Notifications.EnableSummary && result.Issues.Any())
+        if (_options.Notifications.EnableSummary && distinctIssues.Any())
         {
             try
             {
                 await _azureDevOpsService.PostSummaryAsync(
-                    orgUrl, project, repoId, prId, result.Issues);
+                    orgUrl, project, repoId, prId, distinctIssues);
                 _logger.LogInformation("Posted summary to Azure DevOps");
             }
             catch (Exception ex)

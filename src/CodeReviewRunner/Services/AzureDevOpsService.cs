@@ -275,12 +275,13 @@ public class AzureDevOpsService : IAzureDevOpsService
                 }
             }
 
+            var contentText = $"{issue.Severity.ToUpper()}: {issue.Message} (rule {issue.RuleId})";
             var body = new
             {
                 comments = new[] {
                     new {
                         parentCommentId = 0,
-                        content = $"{issue.Severity.ToUpper()}: {issue.Message} (rule {issue.RuleId})",
+                        content = contentText,
                         commentType = "text"
                     }
                 },
@@ -296,7 +297,6 @@ public class AzureDevOpsService : IAzureDevOpsService
             var json = System.Text.Json.JsonSerializer.Serialize(body);
 
             // Skip duplicate if same path/line/content already exists
-            var contentText = $"{issue.Severity.ToUpper()}: {issue.Message} (rule {issue.RuleId})";
             var key = $"{relativePath}|{issue.Line}|{contentText}";
             if (existing.Contains(key))
             {
