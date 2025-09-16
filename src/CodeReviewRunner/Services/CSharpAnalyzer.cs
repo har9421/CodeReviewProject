@@ -33,8 +33,8 @@ public class CSharpAnalyzer
         {
             Console.WriteLine($"  Analyzing: {file}");
             var text = File.ReadAllText(file);
-            var ruleSet = (JArray?)rules["csharp"]?["rules"];
-            foreach (var rule in ruleSet ?? new JArray())
+            var ruleSet = GetLanguageRules(rules, "csharp");
+            foreach (var rule in ruleSet)
             {
                 var type = (string?)rule["type"];
                 var pattern = (string?)rule["pattern"];
@@ -126,8 +126,8 @@ public class CSharpAnalyzer
         foreach (var (path, content) in files)
         {
             Console.WriteLine($"  Analyzing: {path}");
-            var ruleSet = (JArray?)rules["csharp"]?["rules"];
-            foreach (var rule in ruleSet ?? new JArray())
+            var ruleSet = GetLanguageRules(rules, "csharp");
+            foreach (var rule in ruleSet)
             {
                 var type = (string?)rule["type"];
                 var pattern = (string?)rule["pattern"];
@@ -215,6 +215,32 @@ public class CSharpAnalyzer
     {
         var index = text.IndexOf(pattern);
         return index < 0 ? 1 : text.Substring(0, index).Split('\n').Length;
+    }
+
+    private JArray GetLanguageRules(JObject rulesRoot, string language)
+    {
+        // Preferred schema: { "csharp": { "rules": [ ... ] } }
+        var direct = rulesRoot[language]?["rules"] as JArray;
+        if (direct != null)
+            return direct;
+
+        // Fallback schema: { "rules": [ { languages: ["csharp"], ... } ] }
+        var top = rulesRoot["rules"] as JArray;
+        if (top != null)
+        {
+            var filtered = new JArray();
+            foreach (var r in top)
+            {
+                var langs = r["languages"] as JArray;
+                if (langs != null && langs.Any(l => string.Equals((string?)l, language, StringComparison.OrdinalIgnoreCase)))
+                {
+                    filtered.Add(r);
+                }
+            }
+            return filtered;
+        }
+
+        return new JArray();
     }
 
     private IEnumerable<(string lineText, int lineNumber, string propertyName)> FindPropertyDeclarations(string content)

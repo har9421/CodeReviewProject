@@ -34,7 +34,7 @@ public class ReactAnalyzer
         if (!targetFiles.Any())
             return results;
         var configPath = Path.Combine(Path.GetTempPath(), "eslint-config.json");
-        File.WriteAllText(configPath, rules["javascript"]?["eslintOverride"]?.ToString() ?? "{}");
+        File.WriteAllText(configPath, ExtractEslintConfig(rules));
 
         var filesArg = string.Join(" ", targetFiles.Select(f => $"\"{f}\""));
         var psi = new ProcessStartInfo("npx", $"--yes eslint@8 -f json -c \"{configPath}\" {filesArg}")
@@ -84,7 +84,7 @@ public class ReactAnalyzer
             return results;
 
         var configPath = Path.Combine(Path.GetTempPath(), "eslint-config.json");
-        File.WriteAllText(configPath, rules["javascript"]?["eslintOverride"]?.ToString() ?? "{}");
+        File.WriteAllText(configPath, ExtractEslintConfig(rules));
 
         // Create temporary files for ESLint to analyze
         var tempFiles = new List<string>();
@@ -157,3 +157,36 @@ public class ReactAnalyzer
         return results;
     }
 }
+
+static string ExtractEslintConfig(Newtonsoft.Json.Linq.JObject rules)
+    {
+        var direct = rules["javascript"]?["eslintOverride"]?.ToString();
+        if (!string.IsNullOrWhiteSpace(direct)) return direct!;
+
+        // Fallback: map top-level rules to a minimal ESLint config
+        // Only handle a couple of common ones for now
+        var cfg = new Newtonsoft.Json.Linq.JObject
+        {
+            ["rules"] = new Newtonsoft.Json.Linq.JObject()
+        };
+        if (rules["rules"] is Newtonsoft.Json.Linq.JArray all)
+        {
+            foreach (var r in all)
+            {
+                var langs = r["languages"] as Newtonsoft.Json.Linq.JArray;
+                if (langs != null && langs.Any(l => string.Equals((string?)l, "javascript", StringComparison.OrdinalIgnoreCase) || string.Equals((string?)l, "typescript", StringComparison.OrdinalIgnoreCase)))
+                {
+                    var id = (string?)r["id"];
+                    if (string.Equals(id, "no-console", StringComparison.OrdinalIgnoreCase))
+                    {
+                        cfg["rules"]!["no-console"] = "error";
+                    }
+                    if (string.Equals(id, "camelcase", StringComparison.OrdinalIgnoreCase))
+                    {
+                        cfg["rules"]!["camelcase"] = "warn";
+                    }
+                }
+            }
+        }
+        return cfg.ToString();
+    }
