@@ -397,7 +397,8 @@ public class CSharpAnalyzer
     private IEnumerable<(string lineText, int lineNumber, string methodName, bool isAsync)> FindMethodDeclarations(string content)
     {
         // Matches methods like: public void DoWork(..., with optional generics/return types)
-        var regex = new Regex(@"\b(public|protected|internal|private)\s+(async\s+)?[\w<>\?\[\]]+\s+(\w+)\s*\(", RegexOptions.Compiled);
+        // Updated regex to match start of line (with optional whitespace) to ensure we get method declarations
+        var regex = new Regex(@"^\s*(public|protected|internal|private)\s+(async\s+)?[\w<>\?\[\]]+\s+(\w+)\s*\(", RegexOptions.Multiline | RegexOptions.Compiled);
         var lines = content.Split('\n');
         for (int i = 0; i < lines.Length; i++)
         {
@@ -405,8 +406,9 @@ public class CSharpAnalyzer
             var match = regex.Match(line);
             if (match.Success)
             {
-                var isAsync = !string.IsNullOrEmpty(match.Groups[2].Value);
+                var isAsync = !string.IsNullOrEmpty(match.Groups[2].Value?.Trim());
                 var name = match.Groups[3].Value;
+                // For async methods, ensure we report on the method declaration line
                 yield return (line, i + 1, name, isAsync);
             }
         }
