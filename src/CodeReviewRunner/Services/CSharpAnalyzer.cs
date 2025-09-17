@@ -122,7 +122,7 @@ public class CSharpAnalyzer
                                 issues.Add(new CodeIssue
                                 {
                                     FilePath = file,
-                                    Line = lineNumber,
+                                    Line = lineNumber,  // Use the original line number from the method declaration
                                     Message = message ?? "Async methods should end with 'Async' suffix.",
                                     Severity = severity ?? "warning",
                                     RuleId = id ?? "CS008"
@@ -396,20 +396,22 @@ public class CSharpAnalyzer
 
     private IEnumerable<(string lineText, int lineNumber, string methodName, bool isAsync)> FindMethodDeclarations(string content)
     {
-        // Matches methods like: public void DoWork(..., with optional generics/return types)
-        // Updated regex to match start of line (with optional whitespace) to ensure we get method declarations
-        var regex = new Regex(@"^\s*(public|protected|internal|private)\s+(async\s+)?[\w<>\?\[\]]+\s+(\w+)\s*\(", RegexOptions.Multiline | RegexOptions.Compiled);
+        // Matches methods with modifiers and async keyword at the start of a line
+        var regex = new Regex(@"^\s*(public|protected|internal|private)\s+(async\s+)?[\w<>\?\[\]]+\s+(\w+)\s*\(.*$", RegexOptions.Multiline | RegexOptions.Compiled);
         var lines = content.Split('\n');
+        
         for (int i = 0; i < lines.Length; i++)
         {
-            var line = lines[i];
+            var line = lines[i].TrimEnd();
             var match = regex.Match(line);
             if (match.Success)
             {
                 var isAsync = !string.IsNullOrEmpty(match.Groups[2].Value?.Trim());
                 var name = match.Groups[3].Value;
-                // For async methods, ensure we report on the method declaration line
                 yield return (line, i + 1, name, isAsync);
+            }
+        }
+    }
             }
         }
     }
