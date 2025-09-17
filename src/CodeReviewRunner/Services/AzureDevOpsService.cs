@@ -746,61 +746,6 @@ public class AzureDevOpsService : IAzureDevOpsService
             return paths;
         }
     }
-
-    private string GetSampleCSharpCode()
-    {
-        return @"using System;
-using System.Collections.Generic;
-
-public class UserController
-{
-    public void MethodWithVeryLongNameThatExceedsTheMaximumAllowedLengthForCodingStandards()
-    {
-        // This method name is too long and should trigger a warning
-        var unusedVariable = ""This variable is not used"";
-        Console.WriteLine(""Hello World"");
-    }
-    
-    public void GoodMethod()
-    {
-        // This method name is fine
-        Console.WriteLine(""Hello World"");
-    }
-}";
-    }
-
-    private string GetSampleReactCode()
-    {
-        return @"import React from 'react';
-
-const ComponentWithVeryLongNameThatExceedsTheMaximumAllowedLength = () => {
-    // This component name is too long
-    const unusedVariable = 'This variable is not used';
-    return <div>Hello World</div>;
-};
-
-const GoodComponent = () => {
-    // This component name is fine
-    return <div>Hello World</div>;
-};
-
-export default GoodComponent;";
-    }
-
-    private string GetSampleJavaScriptCode()
-    {
-        return @"function functionWithVeryLongNameThatExceedsTheMaximumAllowedLength() {
-    // This function name is too long
-    const unusedVariable = 'This variable is not used';
-    console.log('Hello World');
-}
-
-function goodFunction() {
-    // This function name is fine
-    console.log('Hello World');
-}";
-    }
-
     private async Task<object?> GetPullRequestDetailsAsync(string organization, string project, string repositoryId, string pullRequestId, CancellationToken cancellationToken)
     {
         try
