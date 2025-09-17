@@ -335,7 +335,7 @@ public class AzureDevOpsService : IAzureDevOpsService
         _logger.LogInformation("Posted {CommentCount} comments to Azure DevOps", commentCount);
     }
 
-    public async Task PostSummaryAsync(
+    public Task PostSummaryAsync(
         string organization,
         string project,
         string repositoryId,
@@ -343,40 +343,9 @@ public class AzureDevOpsService : IAzureDevOpsService
         List<CodeIssue> issues,
         CancellationToken cancellationToken = default)
     {
-        if (!_options.Notifications.EnableSummary)
-        {
-            _logger.LogInformation("Summary posting is disabled");
-            return;
-        }
-
-        var url = $"{organization}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}/threads?api-version=6.0";
-
-        var errorCount = issues.Count(i => i.Severity.Equals("error", StringComparison.OrdinalIgnoreCase));
-        var warnCount = issues.Count(i => i.Severity.Equals("warning", StringComparison.OrdinalIgnoreCase));
-        var byLang = issues
-            .GroupBy(i => i.FilePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ? "C#" :
-                (i.FilePath.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
-                 i.FilePath.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase) ||
-                 i.FilePath.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-                 i.FilePath.EndsWith(".jsx", StringComparison.OrdinalIgnoreCase) ? "JS/TS" : "Other"))
-            .Select(g => $"- {g.Key}: {g.Count()} issues");
-
-        var content = $"[CodeReview Bot] Summary\n\n" +
-                      $"- Errors: {errorCount}\n" +
-                      $"- Warnings: {warnCount}\n" +
-                      string.Join("\n", byLang.Take(10));
-
-        var body = new
-        {
-            comments = new[] {
-                new { parentCommentId = 0, content = content, commentType = "text" }
-            },
-            status = "active"
-        };
-
-        var json = System.Text.Json.JsonSerializer.Serialize(body);
-        var response = await _httpClient.PostAsync(url, new StringContent(json, System.Text.Encoding.UTF8, "application/json"), cancellationToken);
-        _logger.LogInformation("Posted summary: {StatusCode}", response.StatusCode);
+        // Summary has been disabled as requested
+        _logger.LogInformation("Summary posting is permanently disabled");
+        return Task.CompletedTask;
     }
 
     private async Task<string> GetRepositoryNameAsync(string org, string project, string repoId, CancellationToken cancellationToken)
