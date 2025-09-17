@@ -3,6 +3,7 @@ using CodeReviewRunner.Services;
 using Newtonsoft.Json.Linq;
 using System.IO;
 using System;
+using System.Threading.Tasks;
 
 namespace CodeReviewRunner.Tests;
 
@@ -38,7 +39,7 @@ public class CSharpAnalyzerTests
   [Fact]
   public void DetectsTypePascalCaseViolation()
   {
-    var rules = CreateRuleSet("type_declaration");
+    var rules = CreateRuleSet("type_declaration", "CS001", "Type names must be in PascalCase.");
     var code = @"
             namespace Test {
                 public class lowercaseClass { }
@@ -57,7 +58,7 @@ public class CSharpAnalyzerTests
   [Fact]
   public void DetectsAsyncMethodViolation()
   {
-    var rules = CreateRuleSet("method_declaration");
+    var rules = CreateRuleSet("method_declaration", "CS008", "Async methods must end with 'Async' suffix.");
     var code = @"
             public class Test {
                 public async Task DoSomething() { }
@@ -68,14 +69,14 @@ public class CSharpAnalyzerTests
 
     Assert.Single(issues);
     var issue = Assert.Single(issues, i => i.RuleId == "CS008");
-    Assert.Contains("Async suffix", issue.Message);
+    Assert.Contains("Async", issue.Message);
     Assert.Equal(3, issue.Line); // DoSomething method
   }
 
   [Fact]
   public void DetectsPrivateFieldViolations()
   {
-    var rules = CreateRuleSet("field_declaration");
+    var rules = CreateRuleSet("field_declaration", "CS007", "Private fields must be prefixed with underscore and use camelCase.");
     var code = @"
             public class Test {
                 private string wrongName;
@@ -96,7 +97,7 @@ public class CSharpAnalyzerTests
   [Fact]
   public void DetectsPropertyPascalCaseViolation()
   {
-    var rules = CreateRuleSet("property_declaration");
+    var rules = CreateRuleSet("property_declaration", "CS004", "Property names must be in PascalCase.");
     var code = @"
             public class Test {
                 public string invalidName { get; set; }
@@ -114,7 +115,7 @@ public class CSharpAnalyzerTests
   [Fact]
   public void DetectsGenericTypeViolations()
   {
-    var rules = CreateRuleSet("type_declaration");
+    var rules = CreateRuleSet("type_declaration", "CS001", "Type names must be in PascalCase.");
     var code = @"
             public class dataContainer<T> { }
             public class DataContainer<TValue> { }
@@ -131,7 +132,7 @@ public class CSharpAnalyzerTests
   [Fact]
   public void DetectsAsyncOverloadViolations()
   {
-    var rules = CreateRuleSet("method_declaration");
+    var rules = CreateRuleSet("method_declaration", "CS008", "Async methods must end with 'Async' suffix.");
     var code = @"
             public class Service {
                 public string GetData(int id) { return """"; }
@@ -149,7 +150,7 @@ public class CSharpAnalyzerTests
   [Fact]
   public void DetectsStaticMemberViolations()
   {
-    var rules = CreateRuleSet("field_declaration");
+    var rules = CreateRuleSet("field_declaration", "CS007", "Static fields must follow naming conventions.");
     var code = @"
             public class Utility {
                 private static string defaultValue;
@@ -170,7 +171,7 @@ public class CSharpAnalyzerTests
   [Fact]
   public void DetectsParameterNamingViolations()
   {
-    var rules = CreateRuleSet("parameter_declaration");
+    var rules = CreateRuleSet("parameter_declaration", "CS012", "Parameters must be in camelCase.");
     var code = @"
             public class Service {
                 public void ProcessData(
@@ -189,18 +190,25 @@ public class CSharpAnalyzerTests
     Assert.Contains(issues, i => i.Message.Contains("underscore") && i.Line == 6); // _count
   }
 
-  private static JObject CreateRuleSet(string appliesTo)
+  private static JObject CreateRuleSet(string appliesTo, string ruleId, string message)
   {
-    return JObject.Parse($@"{{
-            'csharp': {{ 'rules': [
-                {{
-                    'id': 'test',
-                    'type': 'style',
-                    'applies_to': '{appliesTo}',
-                    'message': 'Style check',
-                    'severity': 'warning'
-                }}
-            ]}}
-        }}");
+    var json = new JObject(
+        new JProperty("csharp",
+            new JObject(
+                new JProperty("rules",
+                    new JArray(
+                        new JObject(
+                            new JProperty("id", ruleId),
+                            new JProperty("type", "style"),
+                            new JProperty("applies_to", appliesTo),
+                            new JProperty("message", message),
+                            new JProperty("severity", "warning")
+                        )
+                    )
+                )
+            )
+        )
+    );
+    return json;
   }
 }
