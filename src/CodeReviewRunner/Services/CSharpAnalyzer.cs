@@ -18,7 +18,7 @@ namespace CodeReviewRunner.Services
 
         // Matches method parameters
         private static readonly Regex ParameterDeclarationRegex = new(
-            @"(?<=\(|,)\s*(ref\s+|out\s+|in\s+)?[\w<>\[\],\s]+\s+([A-Za-z]\w*)\s*(?=,|\))",
+            @"(?<=\(|,)\s*(?:ref\s+|out\s+|in\s+|params\s+)?[\w<>\[\],\s]+?\s+([A-Za-z_]\w*)\s*(?:=.*?)?(?=,|\)|$)",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
         // Matches property declarations with modifiers and type
@@ -97,39 +97,7 @@ namespace CodeReviewRunner.Services
                     var appliesTo = (string?)rule["applies_to"];
                     var ruleType = (string?)rule["type"];
 
-                    // Parameter naming check: enforce camelCase
-                    if (appliesTo == "parameter_declaration")
-                    {
-                        foreach (var (lineText, lineNumber, paramName) in FindParameterDeclarations(text))
-                        {
-                            // Check for underscore prefix (not allowed in parameters)
-                            if (paramName.StartsWith("_"))
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = file,
-                                    Line = lineNumber,
-                                    Message = "Parameters should not start with underscore.",
-                                    Severity = "warning",
-                                    RuleId = "CS011",
-                                    Description = $"Parameter '{paramName}' should not start with underscore."
-                                });
-                            }
-                            // Check for PascalCase (should be camelCase)
-                            else if (char.IsUpper(paramName[0]))
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = file,
-                                    Line = lineNumber,
-                                    Message = "Parameters should be in camelCase.",
-                                    Severity = "warning",
-                                    RuleId = "CS012",
-                                    Description = $"Parameter '{paramName}' should start with lowercase letter."
-                                });
-                            }
-                        }
-                    }
+                    // NOTE: Parameter naming check has been moved to AnalyzeFromContent method
 
                     // Property naming convention check
                     if (appliesTo == "property_declaration")
@@ -299,8 +267,45 @@ namespace CodeReviewRunner.Services
                         });
                     }
 
-                    // Property naming check: enforce PascalCase for properties
+                    // Parameter naming check
                     var appliesTo = (string?)rule["applies_to"];
+                    if (appliesTo == "parameter_declaration")
+                    {
+                        foreach (var (lineText, lineNumber, paramName) in FindParameterDeclarations(content))
+                        {
+                            if (!string.IsNullOrEmpty(paramName))
+                            {
+                                // Check for underscore prefix first (not allowed in parameters)
+                                if (paramName.StartsWith("_"))
+                                {
+                                    issues.Add(new CodeIssue
+                                    {
+                                        FilePath = path,
+                                        Line = lineNumber,
+                                        Message = message ?? "Parameters must be in camelCase.",
+                                        Severity = severity ?? "warning",
+                                        RuleId = id ?? "CS012",
+                                        Description = $"Parameter '{paramName}' should not start with underscore."
+                                    });
+                                }
+                                // Check for camelCase
+                                else if (!char.IsLower(paramName[0]))
+                                {
+                                    issues.Add(new CodeIssue
+                                    {
+                                        FilePath = path,
+                                        Line = lineNumber,
+                                        Message = message ?? "Parameters must be in camelCase.",
+                                        Severity = severity ?? "warning",
+                                        RuleId = id ?? "CS012",
+                                        Description = $"Parameter '{paramName}' should start with a lowercase letter."
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    // Property naming check: enforce PascalCase for properties
                     if (appliesTo == "property_declaration")
                     {
                         foreach (var (lineText, lineNumber, propName) in FindPropertyDeclarations(content))
@@ -454,12 +459,13 @@ namespace CodeReviewRunner.Services
             foreach (Match match in PropertyDeclarationRegex.Matches(content))
             {
                 var name = match.Groups[3].Value;
-                var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
+                if (string.IsNullOrEmpty(name))
+                {
+                    continue;
+                }
 
-                var lineStart = content.LastIndexOf('\n', match.Index) + 1;
-                var lineEnd = content.IndexOf('\n', match.Index);
-                if (lineEnd == -1) lineEnd = content.Length;
-                var lineText = content.Substring(lineStart, lineEnd - lineStart);
+                var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
+                var lineText = GetLineTextAtIndex(content, match.Index);
 
                 yield return (lineText, lineNumber, name);
             }
@@ -469,13 +475,15 @@ namespace CodeReviewRunner.Services
         {
             foreach (Match match in TypeDeclarationRegex.Matches(content))
             {
-                var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
                 var typeName = match.Groups[4].Value;
+                if (string.IsNullOrEmpty(typeName))
+                {
+                    continue;
+                }
 
-                var lineStart = content.LastIndexOf('\n', match.Index) + 1;
-                var lineEnd = content.IndexOf('\n', match.Index);
-                if (lineEnd == -1) lineEnd = content.Length;
-                var lineText = content.Substring(lineStart, lineEnd - lineStart);
+                var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
+                var lineText = GetLineTextAtIndex(content, match.Index);
+
                 yield return (lineText, lineNumber, typeName);
             }
         }
@@ -534,31 +542,38 @@ namespace CodeReviewRunner.Services
         {
             foreach (Match match in ParameterDeclarationRegex.Matches(content))
             {
-                var parameterName = match.Groups[2].Value;
+                var parameterName = match.Groups[1].Value;
+                if (string.IsNullOrEmpty(parameterName))
+                {
+                    Console.WriteLine($"Found empty parameter match - skipping");
+                    continue;
+                }
+
                 var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
+                var matchLine = GetLineTextAtIndex(content, match.Index);
 
-                var lineStart = content.LastIndexOf('\n', match.Index) + 1;
-                var lineEnd = content.IndexOf('\n', match.Index);
-                if (lineEnd == -1) lineEnd = content.Length;
-                var lineText = content.Substring(lineStart, lineEnd - lineStart);
-
-                yield return (lineText, lineNumber, parameterName);
+                Console.WriteLine($"Found parameter: {parameterName} at line {lineNumber} in: {matchLine.Trim()}");
+                yield return (matchLine, lineNumber, parameterName);
             }
-        }
-
-        private int GetLineNumberByIndex(string text, int index)
-        {
-            if (index <= 0) return 1;
-            return text.Take(index).Count(c => c == '\n') + 1;
         }
 
         private string GetLineTextAtIndex(string text, int index)
         {
-            var start = text.LastIndexOf('\n', index >= text.Length ? text.Length - 1 : index);
-            var end = text.IndexOf('\n', index);
-            if (start < 0) start = -1;
-            if (end < 0) end = text.Length;
-            return text.Substring(start + 1, end - start - 1);
+            try
+            {
+                var lineStart = text.LastIndexOf('\n', Math.Min(index, text.Length - 1));
+                if (lineStart < 0) lineStart = -1;  // Handle first line
+
+                var lineEnd = index < text.Length ? text.IndexOf('\n', index) : -1;
+                if (lineEnd < 0) lineEnd = text.Length;
+
+                return text.Substring(lineStart + 1, lineEnd - lineStart - 1);
+            }
+            catch
+            {
+                Console.WriteLine($"Error getting line text at index {index} from text length {text.Length}");
+                return string.Empty;
+            }
         }
     }
 }
