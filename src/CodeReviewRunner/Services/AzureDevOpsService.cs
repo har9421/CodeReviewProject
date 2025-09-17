@@ -254,23 +254,32 @@ public class AzureDevOpsService : IAzureDevOpsService
 
         var commentCount = 0;
         var postedThisRun = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        _logger.LogInformation("Processing {IssueCount} issues for comments (MaxCommentsPerFile: {MaxComments})",
+            issues.Count(), _options.Notifications.MaxCommentsPerFile);
+
         foreach (var issue in issues.Take(_options.Notifications.MaxCommentsPerFile))
         {
+            _logger.LogInformation("Processing issue: Rule {RuleId}, Severity {Severity}, File {FilePath}, Line {Line}",
+                issue.RuleId, issue.Severity, issue.FilePath, issue.Line);
+
             // Compute repo-relative normalized path, avoid traversals
             var rel = Path.GetRelativePath(repositoryPath, issue.FilePath).Replace('\\', '/');
             if (rel.StartsWith("../"))
             {
                 // Fall back to using the tail from original path in repo-style format
                 rel = issue.FilePath.Replace('\\', '/').TrimStart('/');
+                _logger.LogInformation("Adjusted file path to: {RelativePath}", rel);
             }
             var relativePath = rel.StartsWith('/') ? rel : "/" + rel;
 
             if (allowedSet != null)
             {
                 var normalizedIssuePath = NormalizeForCompare(repositoryPath, Path.Combine(repositoryPath, relativePath.TrimStart('/')));
+                _logger.LogInformation("Checking if file is in PR changes: {NormalizedPath}", normalizedIssuePath);
                 if (!allowedSet.Contains(normalizedIssuePath))
                 {
-                    _logger.LogDebug("Skip commenting on {RelativePath} (not in PR changed files)", relativePath);
+                    _logger.LogWarning("Skip commenting on {RelativePath} (not in PR changed files). RuleId: {RuleId}",
+                        relativePath, issue.RuleId);
                     continue;
                 }
             }
@@ -300,14 +309,16 @@ public class AzureDevOpsService : IAzureDevOpsService
             var key = $"{relativePath}|{issue.Line}|{contentText}";
             if (existing.Contains(key))
             {
-                _logger.LogDebug("Skip duplicate comment for {Path} line {Line}", relativePath, issue.Line);
+                _logger.LogWarning("Skip duplicate comment for {Path} line {Line}, RuleId: {RuleId}",
+                    relativePath, issue.Line, issue.RuleId);
                 continue;
             }
 
             // Skip duplicates within this run, too
             if (postedThisRun.Contains(key))
             {
-                _logger.LogDebug("Skip same-run duplicate for {Path} line {Line}", relativePath, issue.Line);
+                _logger.LogWarning("Skip same-run duplicate for {Path} line {Line}, RuleId: {RuleId}",
+                    relativePath, issue.Line, issue.RuleId);
                 continue;
             }
 

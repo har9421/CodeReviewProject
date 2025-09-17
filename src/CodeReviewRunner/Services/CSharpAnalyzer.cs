@@ -64,6 +64,7 @@ public class CSharpAnalyzer
                     {
                         if (!string.IsNullOrEmpty(propName) && char.IsLower(propName![0]))
                         {
+                            Console.WriteLine($"Found property naming violation: {propName} in {file} at line {lineNumber}");
                             issues.Add(new CodeIssue
                             {
                                 FilePath = file,
@@ -72,6 +73,7 @@ public class CSharpAnalyzer
                                 Severity = severity ?? "warning",
                                 RuleId = id ?? "CS004"
                             });
+                            Console.WriteLine($"Added CodeIssue for property {propName} with RuleId CS004");
                         }
                     }
                 }
