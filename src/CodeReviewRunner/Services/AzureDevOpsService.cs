@@ -276,10 +276,23 @@ public class AzureDevOpsService : IAzureDevOpsService
             {
                 var normalizedIssuePath = relativePath.TrimStart('/').Replace('\\', '/');
                 _logger.LogInformation("Checking if file is in PR changes: {NormalizedPath}", normalizedIssuePath);
-                if (!allowedSet.Contains(normalizedIssuePath))
+
+                // Try different path normalizations until we find a match
+                var possiblePaths = new[]
                 {
-                    _logger.LogWarning("Skip commenting on {RelativePath} (not in PR changed files). RuleId: {RuleId}",
-                        relativePath, issue.RuleId);
+                    normalizedIssuePath,
+                    normalizedIssuePath.TrimStart('/'),
+                    "Services/" + normalizedIssuePath.TrimStart('/'),
+                    normalizedIssuePath.TrimStart('/').Replace("Services/", ""),
+                    normalizedIssuePath.Replace("/Services/", "/")
+                };
+
+                var pathExists = possiblePaths.Any(p => allowedSet.Contains(p));
+                if (!pathExists)
+                {
+                    _logger.LogWarning("Skip commenting on {FilePath} (not in PR changed files). RuleId: {RuleId}", issue.FilePath, issue.RuleId);
+                    _logger.LogDebug("Tried paths: {Paths}", string.Join(", ", possiblePaths));
+                    _logger.LogDebug("Available paths in PR: {AllowedPaths}", string.Join(", ", allowedSet));
                     continue;
                 }
             }
@@ -787,12 +800,27 @@ public class AzureDevOpsService : IAzureDevOpsService
 
     private static string NormalizeForCompare(string repoPath, string fullPath)
     {
-        var normalized = fullPath;
-        if (Path.DirectorySeparatorChar == '\\')
-            normalized = normalized.Replace('/', '\\');
-        else
-            normalized = normalized.Replace('\\', '/');
-        var rel = Path.GetRelativePath(repoPath, normalized);
-        return rel.TrimStart('/', '\\');
+        if (string.IsNullOrEmpty(fullPath)) return string.Empty;
+
+        // Normalize path separators to forward slash
+        var normalized = fullPath.Replace('\\', '/').TrimStart('/');
+
+        // Handle both with and without 'Services/' prefix
+        if (normalized.StartsWith("Services/", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized.Substring("Services/".Length);
+        }
+
+        // If we have a repo path, try to make the path relative to it
+        if (!string.IsNullOrEmpty(repoPath))
+        {
+            var normalizedRepoPath = repoPath.Replace('\\', '/').TrimStart('/');
+            if (normalized.StartsWith(normalizedRepoPath, StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = normalized.Substring(normalizedRepoPath.Length);
+            }
+        }
+
+        return normalized.Trim('/');
     }
 }
