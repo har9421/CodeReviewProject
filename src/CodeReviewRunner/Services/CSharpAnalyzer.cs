@@ -324,5 +324,112 @@ namespace CodeReviewRunner.Services
                 yield return (lineText, lineNumber, parameterName);
             }
         }
+
+        public List<CodeIssue> AnalyzeFromContent(JObject rules, IEnumerable<(string path, string content)> files)
+        {
+            var issues = new List<CodeIssue>();
+
+            foreach (var (path, content) in files)
+            {
+                Console.WriteLine($"  Analyzing content for: {path}");
+                var ruleSet = GetLanguageRules(rules, "csharp");
+
+                foreach (var rule in ruleSet)
+                {
+                    var type = (string?)rule["type"];
+                    var pattern = (string?)rule["pattern"];
+                    var message = (string?)rule["message"];
+                    var severity = (string?)rule["severity"];
+                    var id = (string?)rule["id"];
+                    var appliesTo = (string?)rule["applies_to"] ?? (string?)rule["appliesTo"] ?? (string?)rule["target"] ?? string.Empty;
+
+                    if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && content.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        var line = GetLineNumber(content, pattern);
+                        issues.Add(new CodeIssue
+                        {
+                            FilePath = path,
+                            Line = line,
+                            Message = message ?? "Rule violation",
+                            Severity = severity ?? "error",
+                            RuleId = id ?? "CS000"
+                        });
+                        continue;
+                    }
+
+                    switch (appliesTo)
+                    {
+                        case "method_declaration":
+                            foreach (var (lineText, lineNumber, methodName, isAsync) in FindMethodDeclarations(content))
+                            {
+                                if (string.IsNullOrEmpty(methodName) || !char.IsUpper(methodName[0]))
+                                {
+                                    issues.Add(new CodeIssue
+                                    {
+                                        FilePath = path,
+                                        Line = lineNumber,
+                                        Message = message ?? "Method names must be in PascalCase.",
+                                        Severity = severity ?? "warning",
+                                        RuleId = id ?? "CS002",
+                                        Description = $"Method '{methodName}' should start with an uppercase letter."
+                                    });
+                                }
+
+                                if (isAsync && !methodName.EndsWith("Async", StringComparison.Ordinal))
+                                {
+                                    issues.Add(new CodeIssue
+                                    {
+                                        FilePath = path,
+                                        Line = lineNumber,
+                                        Message = message ?? "Async methods must end with 'Async' suffix.",
+                                        Severity = severity ?? "warning",
+                                        RuleId = "CS008",
+                                        Description = $"Async method '{methodName}' should be renamed to '{methodName}Async'."
+                                    });
+                                }
+                            }
+                            break;
+
+                        case "variable_declaration":
+                        case "unused-variable":
+                            foreach (var (lineText, lineNumber, variableName) in FindLocalVariableDeclarations(content))
+                            {
+                                // Find method scope bounds
+                                var methodStart = content.LastIndexOf('{', Math.Min(content.Length - 1, content.Take(lineNumber).Count()));
+                                var methodEnd = methodStart >= 0 ? FindMatchingBrace(content, methodStart) : content.Length;
+
+                                if (methodStart >= 0 && methodEnd > methodStart)
+                                {
+                                    var scope = content.Substring(methodStart, methodEnd - methodStart);
+
+                                    // Create more precise pattern that excludes variable declaration
+                                    var declarationPattern = new Regex($@"(?:var|[A-Za-z_][A-Za-z0-9_<>\[\]]*)\s+{Regex.Escape(variableName)}\s*(?::|=|;)");
+                                    var usagePattern = new Regex($@"\b{Regex.Escape(variableName)}\b(?!\s*(?::|=|;|\)))");
+
+                                    var declarations = declarationPattern.Matches(scope);
+                                    var usages = usagePattern.Matches(scope);
+
+                                    // If we only find the declaration and no other usages, mark as unused
+                                    if (declarations.Count > 0 && (usages.Count == 0 ||
+                                        (usages.Count == 1 && usages[0].Index <= declarations[0].Index + declarations[0].Length)))
+                                    {
+                                        issues.Add(new CodeIssue
+                                        {
+                                            FilePath = path,
+                                            Line = lineNumber,
+                                            Message = message ?? "Variable is declared but never used",
+                                            Severity = severity ?? "warning",
+                                            RuleId = id ?? "unused-variable",
+                                            Description = $"The variable '{variableName}' is declared but never used in the code."
+                                        });
+                                    }
+                                }
+                            }
+                            break;
+                    }
+                }
+            }
+            return issues;
+        }
     }
 }
