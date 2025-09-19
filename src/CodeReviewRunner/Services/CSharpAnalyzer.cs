@@ -16,11 +16,6 @@ namespace CodeReviewRunner.Services
             @"^\s*(?:public|private|protected|internal)?\s*(?:abstract\s+|sealed\s+)?(class|interface|struct|record)\s+([A-Za-z_]\w*)",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
-        // Matches method parameters
-        private static readonly Regex ParameterDeclarationRegex = new(
-            @"(?<=\(|,)\s*(?:ref\s+|out\s+|in\s+|params\s+)?[\w<>\[\],\s]+?\s+([A-Za-z_]\w*)\s*(?:=.*?)?(?=,|\)|$)",
-            RegexOptions.Multiline | RegexOptions.Compiled);
-
         // Matches property declarations with modifiers and type - allow any starting case to validate later
         private static readonly Regex PropertyDeclarationRegex = new(
             @"^\s*(?:public|private|protected|internal)?\s*(?:virtual\s+|override\s+|abstract\s+|new\s+|static\s+)*[\w<>\[\],\s]+\s+([A-Za-z_]\w*)\s*\{",
@@ -40,19 +35,21 @@ namespace CodeReviewRunner.Services
             @"^\s*(?:public\s+|private\s+|protected\s+|internal\s+)?(?:static\s+)?const\s+[\w<>\[\],\s]+\s+([^A-Z_]\w*)\b",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
-        private static readonly Regex AsyncMethodWithoutAsyncSuffixRegex = new(
-            @"^\s*(?:public|private|protected|internal)?\s*(?:\w+\s+)*async\s+[\w<>\[\],\s]+\s+(\w+)(?<!Async)\s*\(",
-            RegexOptions.Multiline | RegexOptions.Compiled);
-
         // Local variable declarations (inside methods/blocks)
         private static readonly Regex LocalVariableDeclarationRegex = new(
             @"^\s*(?:var|[A-Za-z_][A-Za-z0-9_<>\[\]]*)\s+([a-zA-Z_][A-Za-z0-9_]*)\s*(?::\s*[\w<>\[\]?]+)?\s*(=|;)",
+            RegexOptions.Multiline | RegexOptions.Compiled);
+
+        // Method parameters
+        private static readonly Regex ParameterDeclarationRegex = new(
+            @"(?<=\(|,)\s*(?:ref\s+|out\s+|in\s+|params\s+)?[\w<>\[\],\s]+?\s+([A-Za-z_]\w*)\s*(?:=.*?)?(?=,|\)|$)",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
         public List<CodeIssue> Analyze(string repoPath, JObject rules, IEnumerable<string>? limitToFiles = null)
         {
             var issues = new List<CodeIssue>();
             IEnumerable<string> csFiles;
+
             if (limitToFiles != null)
             {
                 csFiles = limitToFiles.Where(p => p.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) && File.Exists(p));
@@ -62,11 +59,7 @@ namespace CodeReviewRunner.Services
                 csFiles = Directory.EnumerateFiles(
                     repoPath,
                     "*.cs",
-                    new EnumerationOptions
-                    {
-                        RecurseSubdirectories = true,
-                        IgnoreInaccessible = true
-                    });
+                    new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true });
             }
 
             Console.WriteLine($"CSharpAnalyzer: Processing {csFiles.Count()} C# files");
@@ -75,6 +68,7 @@ namespace CodeReviewRunner.Services
                 Console.WriteLine($"  Analyzing: {file}");
                 var text = File.ReadAllText(file);
                 var ruleSet = GetLanguageRules(rules, "csharp");
+
                 foreach (var rule in ruleSet)
                 {
                     var type = (string?)rule["type"];
@@ -82,6 +76,7 @@ namespace CodeReviewRunner.Services
                     var message = (string?)rule["message"];
                     var severity = (string?)rule["severity"];
                     var id = (string?)rule["id"];
+                    var appliesTo = (string?)rule["applies_to"] ?? (string?)rule["appliesTo"] ?? (string?)rule["target"] ?? string.Empty;
 
                     if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && text.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0)
                     {
@@ -94,394 +89,127 @@ namespace CodeReviewRunner.Services
                             Severity = severity ?? "error",
                             RuleId = id ?? "CS000"
                         });
+                        continue;
                     }
 
-                    var appliesTo = (string?)rule["applies_to"] ?? (string?)rule["appliesTo"] ?? (string?)rule["target"] ?? string.Empty;
-
-                    if (appliesTo == "property_declaration")
+                    switch (appliesTo)
                     {
-                        foreach (var (lineText, lineNumber, propName) in FindPropertyDeclarations(text))
-                        {
-                            if (string.IsNullOrEmpty(propName) || !char.IsUpper(propName[0]))
+                        case "method_declaration":
+                            foreach (var (lineText, lineNumber, methodName, isAsync) in FindMethodDeclarations(text))
                             {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = file,
-                                    Line = lineNumber,
-                                    Message = message ?? "Property names must be in PascalCase.",
-                                    Severity = severity ?? "warning",
-                                    RuleId = id ?? "CS004",
-                                    Description = $"Property '{propName}' should start with an uppercase letter."
-                                });
-                            }
-                        }
-                    }
-
-                    if (appliesTo == "type_declaration")
-                    {
-                        foreach (var (lineText, lineNumber, typeName) in FindTypeDeclarations(text))
-                        {
-                            if (string.IsNullOrEmpty(typeName) || !char.IsUpper(typeName[0]))
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = file,
-                                    Line = lineNumber,
-                                    Message = message ?? "Type names must be in PascalCase.",
-                                    Severity = severity ?? "warning",
-                                    RuleId = id ?? "CS001",
-                                    Description = $"Type '{typeName}' should start with an uppercase letter."
-                                });
-                            }
-
-                            var match = InterfaceNameRegex.Match(lineText);
-                            if (match.Success)
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = file,
-                                    Line = lineNumber,
-                                    Message = "Interface names must start with 'I'.",
-                                    Severity = "warning",
-                                    RuleId = "CS009",
-                                    Description = $"Interface '{match.Groups[1].Value}' should be renamed to 'I{match.Groups[1].Value}'."
-                                });
-                            }
-                        }
-                    }
-
-                    if (appliesTo == "method_declaration")
-                    {
-                        foreach (var (lineText, lineNumber, methodName, isAsync) in FindMethodDeclarations(text))
-                        {
-                            if (string.IsNullOrEmpty(methodName) || !char.IsUpper(methodName[0]))
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = file,
-                                    Line = lineNumber,
-                                    Message = message ?? "Method names must be in PascalCase.",
-                                    Severity = severity ?? "warning",
-                                    RuleId = id ?? "CS002",
-                                    Description = $"Method '{methodName}' should start with an uppercase letter."
-                                });
-                            }
-
-                            if (isAsync && !methodName.EndsWith("Async", StringComparison.Ordinal))
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = file,
-                                    Line = lineNumber,
-                                    Message = message ?? "Async methods must end with 'Async' suffix.",
-                                    Severity = severity ?? "warning",
-                                    RuleId = "CS008",
-                                    Description = $"Async method '{methodName}' should be renamed to '{methodName}Async'."
-                                });
-                            }
-                        }
-                    }
-
-                    if (appliesTo == "field_declaration")
-                    {
-                        foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate, isPublic, isReadonly) in FindFieldDeclarations(text))
-                        {
-                            if (isConst)
-                            {
-                                var isValid = fieldName.All(c => c == '_' || char.IsDigit(c) || char.IsUpper(c));
-                                if (!isValid)
+                                if (string.IsNullOrEmpty(methodName) || !char.IsUpper(methodName[0]))
                                 {
                                     issues.Add(new CodeIssue
                                     {
                                         FilePath = file,
                                         Line = lineNumber,
-                                        Message = message ?? "Constants must be in ALL_CAPS with underscores.",
+                                        Message = message ?? "Method names must be in PascalCase.",
                                         Severity = severity ?? "warning",
-                                        RuleId = "CS005",
-                                        Description = $"Constant '{fieldName}' should be in uppercase with underscores."
+                                        RuleId = id ?? "CS002",
+                                        Description = $"Method '{methodName}' should start with an uppercase letter."
                                     });
                                 }
-                            }
 
-                            if (isPublic)
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = file,
-                                    Line = lineNumber,
-                                    Message = message ?? "Avoid public fields; use properties instead.",
-                                    Severity = severity ?? "warning",
-                                    RuleId = "CS010"
-                                });
-                            }
-
-                            if (isPrivate && !isConst && !isReadonly)
-                            {
-                                var isValid = fieldName.StartsWith("_") && fieldName.Length > 1 && char.IsLower(fieldName[1]);
-                                if (!isValid)
+                                if (isAsync && !methodName.EndsWith("Async", StringComparison.Ordinal))
                                 {
                                     issues.Add(new CodeIssue
                                     {
                                         FilePath = file,
                                         Line = lineNumber,
-                                        Message = message ?? "Private fields must be in camelCase and prefixed with '_'.",
+                                        Message = message ?? "Async methods must end with 'Async' suffix.",
                                         Severity = severity ?? "warning",
-                                        RuleId = id ?? "CS007"
+                                        RuleId = "CS008",
+                                        Description = $"Async method '{methodName}' should be renamed to '{methodName}Async'."
                                     });
                                 }
                             }
-                        }
-                    }
+                            break;
 
-                    if (appliesTo == "variable_declaration" || string.Equals(id, "unused-variable", StringComparison.OrdinalIgnoreCase))
-                    {
-                        foreach (var (lineText, lineNumber, variableName) in FindLocalVariableDeclarations(text))
-                        {
-                            var usagePattern = new Regex($"\\b{Regex.Escape(variableName)}\\b", RegexOptions.Multiline);
-                            var matches = usagePattern.Matches(text);
-                            if (matches.Count <= 1)
+                        case "variable_declaration":
+                        case "unused-variable":
+                            foreach (var (lineText, lineNumber, variableName) in FindLocalVariableDeclarations(text))
                             {
-                                issues.Add(new CodeIssue
+                                // Find method scope bounds
+                                var methodStart = text.LastIndexOf('{', Math.Min(text.Length - 1, text.Take(lineNumber).Count()));
+                                var methodEnd = methodStart >= 0 ? FindMatchingBrace(text, methodStart) : text.Length;
+
+                                if (methodStart >= 0 && methodEnd > methodStart)
                                 {
-                                    FilePath = file,
-                                    Line = lineNumber,
-                                    Message = message ?? "Unused variable detected",
-                                    Severity = severity ?? "warning",
-                                    RuleId = id ?? "unused-variable"
-                                });
+                                    var scope = text.Substring(methodStart, methodEnd - methodStart);
+
+                                    // Create more precise pattern that excludes variable declaration
+                                    var declarationPattern = new Regex($@"(?:var|[A-Za-z_][A-Za-z0-9_<>\[\]]*)\s+{Regex.Escape(variableName)}\s*(?::|=|;)");
+                                    var usagePattern = new Regex($@"\b{Regex.Escape(variableName)}\b(?!\s*(?::|=|;|\)))");
+
+                                    var declarations = declarationPattern.Matches(scope);
+                                    var usages = usagePattern.Matches(scope);
+
+                                    // If we only find the declaration and no other usages, mark as unused
+                                    if (declarations.Count > 0 && (usages.Count == 0 ||
+                                        (usages.Count == 1 && usages[0].Index <= declarations[0].Index + declarations[0].Length)))
+                                    {
+                                        issues.Add(new CodeIssue
+                                        {
+                                            FilePath = file,
+                                            Line = lineNumber,
+                                            Message = message ?? "Variable is declared but never used",
+                                            Severity = severity ?? "warning",
+                                            RuleId = id ?? "unused-variable",
+                                            Description = $"The variable '{variableName}' is declared but never used in the code."
+                                        });
+                                    }
+                                }
                             }
-                        }
+                            break;
                     }
                 }
             }
             return issues;
         }
 
-        public List<CodeIssue> AnalyzeFromContent(JObject rules, IEnumerable<(string path, string content)> files)
+        private int FindMatchingBrace(string text, int openBraceIndex)
         {
-            var issues = new List<CodeIssue>();
+            if (openBraceIndex < 0 || openBraceIndex >= text.Length || text[openBraceIndex] != '{')
+                return text.Length;
 
-            Console.WriteLine($"CSharpAnalyzer: Processing {files.Count()} C# files from content");
-            foreach (var (path, content) in files)
+            int depth = 1;
+            for (int i = openBraceIndex + 1; i < text.Length; i++)
             {
-                Console.WriteLine($"  Analyzing: {path}");
-                var ruleSet = GetLanguageRules(rules, "csharp");
-                foreach (var rule in ruleSet)
+                if (text[i] == '{')
+                    depth++;
+                else if (text[i] == '}')
                 {
-                    var type = (string?)rule["type"];
-                    var pattern = (string?)rule["pattern"];
-                    var message = (string?)rule["message"];
-                    var severity = (string?)rule["severity"];
-                    var id = (string?)rule["id"];
-
-                    if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && content.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        var line = GetLineNumber(content, pattern);
-                        issues.Add(new CodeIssue
-                        {
-                            FilePath = path,
-                            Line = line,
-                            Message = message ?? "Rule violation",
-                            Severity = severity ?? "error",
-                            RuleId = id ?? "CS000"
-                        });
-                    }
-
-                    var appliesTo = (string?)rule["applies_to"] ?? (string?)rule["appliesTo"] ?? (string?)rule["target"] ?? string.Empty;
-                    if (appliesTo == "parameter_declaration")
-                    {
-                        foreach (var (lineText, lineNumber, paramName) in FindParameterDeclarations(content))
-                        {
-                            if (!string.IsNullOrEmpty(paramName))
-                            {
-                                if (paramName.StartsWith("_"))
-                                {
-                                    issues.Add(new CodeIssue
-                                    {
-                                        FilePath = path,
-                                        Line = lineNumber,
-                                        Message = message ?? "Parameters must be in camelCase.",
-                                        Severity = severity ?? "warning",
-                                        RuleId = id ?? "CS012",
-                                        Description = $"Parameter '{paramName}' should not start with underscore."
-                                    });
-                                }
-                                else if (!char.IsLower(paramName[0]))
-                                {
-                                    issues.Add(new CodeIssue
-                                    {
-                                        FilePath = path,
-                                        Line = lineNumber,
-                                        Message = message ?? "Parameters must be in camelCase.",
-                                        Severity = severity ?? "warning",
-                                        RuleId = id ?? "CS012",
-                                        Description = $"Parameter '{paramName}' should start with a lowercase letter."
-                                    });
-                                }
-                            }
-                        }
-                    }
-
-                    if (appliesTo == "property_declaration")
-                    {
-                        foreach (var (lineText, lineNumber, propName) in FindPropertyDeclarations(content))
-                        {
-                            if (!string.IsNullOrEmpty(propName) && char.IsLower(propName![0]))
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = path,
-                                    Line = lineNumber,
-                                    Message = message ?? "Property names should be in PascalCase.",
-                                    Severity = severity ?? "warning",
-                                    RuleId = id ?? "CS004"
-                                });
-                            }
-                        }
-                    }
-
-                    if (appliesTo == "type_declaration")
-                    {
-                        foreach (var (lineText, lineNumber, typeName) in FindTypeDeclarations(content))
-                        {
-                            if (!string.IsNullOrEmpty(typeName) && char.IsLower(typeName![0]))
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = path,
-                                    Line = lineNumber,
-                                    Message = message ?? "Type names should be in PascalCase.",
-                                    Severity = severity ?? "warning",
-                                    RuleId = id ?? "CS001"
-                                });
-                            }
-
-                            var match = InterfaceNameRegex.Match(lineText);
-                            if (match.Success)
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = path,
-                                    Line = lineNumber,
-                                    Message = "Interface names must start with 'I'.",
-                                    Severity = "warning",
-                                    RuleId = "CS009"
-                                });
-                            }
-                        }
-                    }
-
-                    if (appliesTo == "method_declaration")
-                    {
-                        foreach (var (lineText, lineNumber, methodName, isAsync) in FindMethodDeclarations(content))
-                        {
-                            // Check PascalCase rule for all methods
-                            if (string.Equals(id, "CS002", StringComparison.OrdinalIgnoreCase) &&
-                                !string.IsNullOrEmpty(methodName) && char.IsLower(methodName![0]))
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = path,
-                                    Line = lineNumber,
-                                    Message = message ?? "Method names should be in PascalCase.",
-                                    Severity = severity ?? "warning",
-                                    RuleId = id ?? "CS002"
-                                });
-                            }
-
-                            // Check Async suffix rule for async methods
-                            if (string.Equals(id, "CS008", StringComparison.OrdinalIgnoreCase) &&
-                                isAsync && !methodName.EndsWith("Async", StringComparison.Ordinal))
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = path,
-                                    Line = lineNumber,
-                                    Message = message ?? "Async methods should end with 'Async' suffix.",
-                                    Severity = severity ?? "warning",
-                                    RuleId = id ?? "CS008"
-                                });
-                            }
-                        }
-                    }
-
-                    if (appliesTo == "field_declaration")
-                    {
-                        foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate, isPublic, isReadonly) in FindFieldDeclarations(content))
-                        {
-                            if (isConst)
-                            {
-                                if (!(fieldName.All(c => c == '_' || char.IsDigit(c) || char.IsUpper(c))))
-                                {
-                                    issues.Add(new CodeIssue
-                                    {
-                                        FilePath = path,
-                                        Line = lineNumber,
-                                        Message = message ?? "Constants should be in ALL_CAPS with underscores.",
-                                        Severity = severity ?? "warning",
-                                        RuleId = "CS005"
-                                    });
-                                }
-                            }
-
-                            if (isPublic)
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = path,
-                                    Line = lineNumber,
-                                    Message = message ?? "Avoid public fields; use properties instead.",
-                                    Severity = severity ?? "warning",
-                                    RuleId = "CS010"
-                                });
-                            }
-
-                            if (isPrivate && !isConst && !isReadonly)
-                            {
-                                var valid = fieldName.StartsWith("_") && fieldName.Length > 1 && char.IsLower(fieldName[1]);
-                                if (!valid)
-                                {
-                                    issues.Add(new CodeIssue
-                                    {
-                                        FilePath = path,
-                                        Line = lineNumber,
-                                        Message = message ?? "Private fields should be in camelCase and prefixed with '_'.",
-                                        Severity = severity ?? "warning",
-                                        RuleId = id ?? "CS007"
-                                    });
-                                }
-                            }
-                        }
-                    }
-
-                    if (appliesTo == "variable_declaration" || string.Equals(id, "unused-variable", StringComparison.OrdinalIgnoreCase))
-                    {
-                        foreach (var (lineText, lineNumber, variableName) in FindLocalVariableDeclarations(content))
-                        {
-                            var usagePattern = new Regex($"\\b{Regex.Escape(variableName)}\\b", RegexOptions.Multiline);
-                            var matches = usagePattern.Matches(content);
-                            if (matches.Count <= 1)
-                            {
-                                issues.Add(new CodeIssue
-                                {
-                                    FilePath = path,
-                                    Line = lineNumber,
-                                    Message = message ?? "Unused variable detected",
-                                    Severity = severity ?? "warning",
-                                    RuleId = id ?? "unused-variable"
-                                });
-                            }
-                        }
-                    }
+                    depth--;
+                    if (depth == 0)
+                        return i;
                 }
             }
-            return issues;
+            return text.Length;
         }
 
         private int GetLineNumber(string text, string pattern)
         {
             var index = text.IndexOf(pattern);
             return index < 0 ? 1 : text.Substring(0, index).Split('\n').Length;
+        }
+
+        private string GetLineTextAtIndex(string text, int index)
+        {
+            try
+            {
+                var lineStart = text.LastIndexOf('\n', Math.Min(index, text.Length - 1));
+                if (lineStart < 0) lineStart = -1;
+
+                var lineEnd = index < text.Length ? text.IndexOf('\n', index) : -1;
+                if (lineEnd < 0) lineEnd = text.Length;
+
+                return text.Substring(lineStart + 1, lineEnd - lineStart - 1);
+            }
+            catch
+            {
+                Console.WriteLine($"Error getting line text at index {index} from text length {text.Length}");
+                return string.Empty;
+            }
         }
 
         private JArray GetLanguageRules(JObject rulesRoot, string language)
@@ -550,44 +278,14 @@ namespace CodeReviewRunner.Services
                 var methodName = match.Groups[2].Value;
                 var isAsync = !string.IsNullOrEmpty(match.Groups[1].Value);
 
-                var lineStart = content.LastIndexOf('\n', match.Index) + 1;
-                var lineEnd = content.IndexOf('\n', match.Index);
-                if (lineEnd == -1) lineEnd = content.Length;
-                var lineText = content.Substring(lineStart, lineEnd - lineStart);
+                var lineText = GetLineTextAtIndex(content, match.Index);
 
                 if (!lineText.Contains("class") &&
                     !lineText.Contains("interface") &&
                     !lineText.Contains("struct"))
                 {
-                    if (isAsync)
-                    {
-                        Console.WriteLine($"Found async method: {methodName} at line {lineNumber}");
-                    }
-
                     yield return (lineText, lineNumber, methodName, isAsync);
                 }
-            }
-        }
-
-        private IEnumerable<(string lineText, int lineNumber, string fieldName, bool isConst, bool isPrivate, bool isPublic, bool isReadonly)> FindFieldDeclarations(string content)
-        {
-            foreach (Match match in FieldDeclarationRegex.Matches(content))
-            {
-                var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
-                var access = match.Groups[1].Value;
-                var mods = match.Groups[2].Value;
-                var name = match.Groups[3].Value;
-                var isConst = mods.Contains("const", StringComparison.OrdinalIgnoreCase);
-                var isReadonly = mods.Contains("readonly", StringComparison.OrdinalIgnoreCase);
-                var isPrivate = string.Equals(access, "private", StringComparison.OrdinalIgnoreCase);
-                var isPublic = string.Equals(access, "public", StringComparison.OrdinalIgnoreCase);
-
-                var lineStart = content.LastIndexOf('\n', match.Index) + 1;
-                var lineEnd = content.IndexOf('\n', match.Index);
-                if (lineEnd == -1) lineEnd = content.Length;
-                var lineText = content.Substring(lineStart, lineEnd - lineStart);
-
-                yield return (lineText, lineNumber, name, isConst, isPrivate, isPublic, isReadonly);
             }
         }
 
@@ -604,12 +302,10 @@ namespace CodeReviewRunner.Services
                 var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
                 var lineText = GetLineTextAtIndex(content, match.Index);
 
-                if (Regex.IsMatch(lineText, @"\b(public|private|protected|internal)\b"))
+                if (!Regex.IsMatch(lineText, @"\b(public|private|protected|internal)\b"))
                 {
-                    continue;
+                    yield return (lineText, lineNumber, varName);
                 }
-
-                yield return (lineText, lineNumber, varName);
             }
         }
 
@@ -620,34 +316,12 @@ namespace CodeReviewRunner.Services
                 var parameterName = match.Groups[1].Value;
                 if (string.IsNullOrEmpty(parameterName))
                 {
-                    Console.WriteLine($"Found empty parameter match - skipping");
                     continue;
                 }
 
                 var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
-                var matchLine = GetLineTextAtIndex(content, match.Index);
-
-                Console.WriteLine($"Found parameter: {parameterName} at line {lineNumber} in: {matchLine.Trim()}");
-                yield return (matchLine, lineNumber, parameterName);
-            }
-        }
-
-        private string GetLineTextAtIndex(string text, int index)
-        {
-            try
-            {
-                var lineStart = text.LastIndexOf('\n', Math.Min(index, text.Length - 1));
-                if (lineStart < 0) lineStart = -1;
-
-                var lineEnd = index < text.Length ? text.IndexOf('\n', index) : -1;
-                if (lineEnd < 0) lineEnd = text.Length;
-
-                return text.Substring(lineStart + 1, lineEnd - lineStart - 1);
-            }
-            catch
-            {
-                Console.WriteLine($"Error getting line text at index {index} from text length {text.Length}");
-                return string.Empty;
+                var lineText = GetLineTextAtIndex(content, match.Index);
+                yield return (lineText, lineNumber, parameterName);
             }
         }
     }

@@ -1,0 +1,20 @@
+{
+  "csharp": {
+    "rules": [
+      {
+        "id": "CS008",
+        "type": "style",
+        "applies_to": "method_declaration",
+        "message": "Async methods should end with 'Async' suffix.",
+        "severity": "warning"
+      },
+      {
+        "id": "unused-variable",
+        "type": "style",
+        "applies_to": "variable_declaration",
+        "message": "Variable is declared but never used",
+        "severity": "warning"
+      }
+    ]
+  }
+}
