@@ -184,7 +184,7 @@ namespace CodeReviewRunner.Services
 
                     if (appliesTo == "field_declaration")
                     {
-                        foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate, isPublic) in FindFieldDeclarations(text))
+                        foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate, isPublic, isReadonly) in FindFieldDeclarations(text))
                         {
                             if (isConst)
                             {
@@ -215,7 +215,7 @@ namespace CodeReviewRunner.Services
                                 });
                             }
 
-                            if (isPrivate && !isConst)
+                            if (isPrivate && !isConst && !isReadonly)
                             {
                                 var isValid = fieldName.StartsWith("_") && fieldName.Length > 1 && char.IsLower(fieldName[1]);
                                 if (!isValid)
@@ -375,7 +375,9 @@ namespace CodeReviewRunner.Services
                     {
                         foreach (var (lineText, lineNumber, methodName, isAsync) in FindMethodDeclarations(content))
                         {
-                            if (!string.IsNullOrEmpty(methodName) && char.IsLower(methodName![0]))
+                            // Check PascalCase rule for all methods
+                            if (string.Equals(id, "CS002", StringComparison.OrdinalIgnoreCase) &&
+                                !string.IsNullOrEmpty(methodName) && char.IsLower(methodName![0]))
                             {
                                 issues.Add(new CodeIssue
                                 {
@@ -387,26 +389,25 @@ namespace CodeReviewRunner.Services
                                 });
                             }
 
-                            if (isAsync && (string.Equals(id, "CS008", StringComparison.OrdinalIgnoreCase) || (message?.Contains("Async", StringComparison.OrdinalIgnoreCase) ?? false)))
+                            // Check Async suffix rule for async methods
+                            if (string.Equals(id, "CS008", StringComparison.OrdinalIgnoreCase) &&
+                                isAsync && !methodName.EndsWith("Async", StringComparison.Ordinal))
                             {
-                                if (!methodName.EndsWith("Async", StringComparison.Ordinal))
+                                issues.Add(new CodeIssue
                                 {
-                                    issues.Add(new CodeIssue
-                                    {
-                                        FilePath = path,
-                                        Line = lineNumber,
-                                        Message = message ?? "Async methods should end with 'Async' suffix.",
-                                        Severity = severity ?? "warning",
-                                        RuleId = id ?? "CS008"
-                                    });
-                                }
+                                    FilePath = path,
+                                    Line = lineNumber,
+                                    Message = message ?? "Async methods should end with 'Async' suffix.",
+                                    Severity = severity ?? "warning",
+                                    RuleId = id ?? "CS008"
+                                });
                             }
                         }
                     }
 
                     if (appliesTo == "field_declaration")
                     {
-                        foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate, isPublic) in FindFieldDeclarations(content))
+                        foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate, isPublic, isReadonly) in FindFieldDeclarations(content))
                         {
                             if (isConst)
                             {
@@ -435,7 +436,7 @@ namespace CodeReviewRunner.Services
                                 });
                             }
 
-                            if (isPrivate && !isConst)
+                            if (isPrivate && !isConst && !isReadonly)
                             {
                                 var valid = fieldName.StartsWith("_") && fieldName.Length > 1 && char.IsLower(fieldName[1]);
                                 if (!valid)
@@ -568,7 +569,7 @@ namespace CodeReviewRunner.Services
             }
         }
 
-        private IEnumerable<(string lineText, int lineNumber, string fieldName, bool isConst, bool isPrivate, bool isPublic)> FindFieldDeclarations(string content)
+        private IEnumerable<(string lineText, int lineNumber, string fieldName, bool isConst, bool isPrivate, bool isPublic, bool isReadonly)> FindFieldDeclarations(string content)
         {
             foreach (Match match in FieldDeclarationRegex.Matches(content))
             {
@@ -577,6 +578,7 @@ namespace CodeReviewRunner.Services
                 var mods = match.Groups[2].Value;
                 var name = match.Groups[3].Value;
                 var isConst = mods.Contains("const", StringComparison.OrdinalIgnoreCase);
+                var isReadonly = mods.Contains("readonly", StringComparison.OrdinalIgnoreCase);
                 var isPrivate = string.Equals(access, "private", StringComparison.OrdinalIgnoreCase);
                 var isPublic = string.Equals(access, "public", StringComparison.OrdinalIgnoreCase);
 
@@ -585,7 +587,7 @@ namespace CodeReviewRunner.Services
                 if (lineEnd == -1) lineEnd = content.Length;
                 var lineText = content.Substring(lineStart, lineEnd - lineStart);
 
-                yield return (lineText, lineNumber, name, isConst, isPrivate, isPublic);
+                yield return (lineText, lineNumber, name, isConst, isPrivate, isPublic, isReadonly);
             }
         }
 

@@ -72,14 +72,14 @@ public class RulesService : IRulesService
         }
     }
 
-    public async Task<bool> ValidateRulesAsync(List<CodingRule> rules, CancellationToken cancellationToken = default)
+    public Task<bool> ValidateRulesAsync(List<CodingRule> rules, CancellationToken cancellationToken = default)
     {
         try
         {
             if (!rules.Any())
             {
                 _logger.LogWarning("No rules provided for validation");
-                return false;
+                return Task.FromResult(false);
             }
 
             var validRules = 0;
@@ -102,16 +102,16 @@ public class RulesService : IRulesService
             _logger.LogInformation("Rule validation completed: {ValidRules} valid, {InvalidRules} invalid",
                 validRules, invalidRules);
 
-            return invalidRules == 0;
+            return Task.FromResult(invalidRules == 0);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during rule validation");
-            return false;
+            return Task.FromResult(false);
         }
     }
 
-    public async Task CacheRulesAsync(List<CodingRule> rules, CancellationToken cancellationToken = default)
+    public Task CacheRulesAsync(List<CodingRule> rules, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -125,24 +125,26 @@ public class RulesService : IRulesService
             _cache.Set(cacheKey, rules, cacheOptions);
             _logger.LogDebug("Cached {RuleCount} rules for {Minutes} minutes",
                 rules.Count, _options.Rules.CacheTimeoutMinutes);
+            return Task.CompletedTask;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to cache rules");
+            return Task.CompletedTask;
         }
     }
 
-    public async Task<List<CodingRule>?> GetCachedRulesAsync(CancellationToken cancellationToken = default)
+    public Task<List<CodingRule>?> GetCachedRulesAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             var cacheKey = "coding_rules";
-            return _cache.Get<List<CodingRule>>(cacheKey);
+            return Task.FromResult(_cache.Get<List<CodingRule>>(cacheKey));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to retrieve cached rules");
-            return null;
+            return Task.FromResult<List<CodingRule>?>(null);
         }
     }
 
