@@ -94,7 +94,7 @@ namespace CodeReviewRunner.Services
                         });
                     }
 
-                    var appliesTo = (string?)rule["applies_to"];
+                    var appliesTo = (string?)rule["applies_to"] ?? (string?)rule["appliesTo"] ?? (string?)rule["target"] ?? string.Empty;
                     var ruleType = (string?)rule["type"];
 
                     // NOTE: Parameter naming check has been moved to AnalyzeFromContent method
@@ -268,7 +268,7 @@ namespace CodeReviewRunner.Services
                     }
 
                     // Parameter naming check
-                    var appliesTo = (string?)rule["applies_to"];
+                    var appliesTo = (string?)rule["applies_to"] ?? (string?)rule["appliesTo"] ?? (string?)rule["target"] ?? string.Empty;
                     if (appliesTo == "parameter_declaration")
                     {
                         foreach (var (lineText, lineNumber, paramName) in FindParameterDeclarations(content))

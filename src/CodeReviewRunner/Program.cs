@@ -62,13 +62,11 @@ class Program
                 services.AddScoped<ICodeReviewService, CodeReviewService>();
                 services.AddScoped<IAnalysisService, AnalysisService>();
                 services.AddScoped<IRulesService, RulesService>();
-                services.AddScoped<IAzureDevOpsService, AzureDevOpsService>();
 
                 // Caching
                 services.AddMemoryCache();
 
-                // Health Checks
-                services.AddHealthChecks();
+                // Health Checks removed (unused)
 
                 // Application
                 services.AddScoped<CodeReviewApplication>();
