@@ -24,7 +24,7 @@ public class AnalysisService : IAnalysisService
         _csharpAnalyzer = new CSharpAnalyzer();
     }
 
-    public async Task<List<CodeIssue>> AnalyzeCSharpFilesAsync(
+    public Task<List<CodeIssue>> AnalyzeCSharpFilesAsync(
         Newtonsoft.Json.Linq.JObject rules,
         IEnumerable<(string path, string content)> files,
         CancellationToken cancellationToken = default)
@@ -35,7 +35,7 @@ public class AnalysisService : IAnalysisService
 
         if (!csharpFiles.Any())
         {
-            return new List<CodeIssue>();
+            return Task.FromResult(new List<CodeIssue>());
         }
 
         _logger.LogInformation("Analyzing {FileCount} C# files", csharpFiles.Count);
@@ -52,7 +52,7 @@ public class AnalysisService : IAnalysisService
         }
 
         _logger.LogInformation("Found {IssueCount} C# issues", issues.Count);
-        return issues;
+        return Task.FromResult(issues);
     }
 
     // Removed JS/TS analysis per request
