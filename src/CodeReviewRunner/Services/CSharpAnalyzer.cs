@@ -8,12 +8,12 @@ namespace CodeReviewRunner.Services
     {
         // Matches method declarations with modifiers, return type, and name
         private static readonly Regex MethodDeclarationRegex = new(
-            @"^\s*(public|private|protected|internal)\s+(virtual\s+|override\s+|abstract\s+|new\s+|static\s+)*(async\s+)?[\w<>\[\],\s]+\s+([A-Za-z]\w*)\s*\(",
+            @"^\s*(?:public|private|protected|internal)?\s*(?:virtual\s+|override\s+|abstract\s+|new\s+|static\s+)*(async\s+)?[\w<>\[\],\s]+\s+([A-Za-z]\w*)\s*\(",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
-        // Matches type declarations (class, interface, struct, record)
+        // Matches type declarations (class, interface, struct, record) - allow any starting case to validate later
         private static readonly Regex TypeDeclarationRegex = new(
-            @"^\s*(public|private|protected|internal)\s+(abstract\s+|sealed\s+)*(class|interface|struct|record)\s+([A-Z]\w*)",
+            @"^\s*(?:public|private|protected|internal)?\s*(?:abstract\s+|sealed\s+)?(class|interface|struct|record)\s+([A-Za-z_]\w*)",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
         // Matches method parameters
@@ -21,9 +21,9 @@ namespace CodeReviewRunner.Services
             @"(?<=\(|,)\s*(?:ref\s+|out\s+|in\s+|params\s+)?[\w<>\[\],\s]+?\s+([A-Za-z_]\w*)\s*(?:=.*?)?(?=,|\)|$)",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
-        // Matches property declarations with modifiers and type
+        // Matches property declarations with modifiers and type - allow any starting case to validate later
         private static readonly Regex PropertyDeclarationRegex = new(
-            @"^\s*(public|private|protected|internal)\s+(virtual\s+|override\s+|abstract\s+|new\s+|static\s+)*[\w<>\[\],\s]+\s+([A-Z]\w*)\s*\{",
+            @"^\s*(?:public|private|protected|internal)?\s*(?:virtual\s+|override\s+|abstract\s+|new\s+|static\s+)*[\w<>\[\],\s]+\s+([A-Za-z_]\w*)\s*\{",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
         // Matches field declarations with modifiers and type
@@ -33,18 +33,18 @@ namespace CodeReviewRunner.Services
 
         // Additional patterns for specific rules
         private static readonly Regex InterfaceNameRegex = new(
-            @"^\s*(?:public|internal)\s+interface\s+(?!I[A-Z]\w*\b)(\w+)",
+            @"^\s*(?:public|internal)?\s*interface\s+(?!I[A-Z]\w*\b)(\w+)",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
         private static readonly Regex ConstantFieldRegex = new(
-            @"^\s*(?:public\s+|private\s+|protected\s+|internal\s+)(?:static\s+)?const\s+[\w<>\[\],\s]+\s+([^A-Z_]\w*)\b",
+            @"^\s*(?:public\s+|private\s+|protected\s+|internal\s+)?(?:static\s+)?const\s+[\w<>\[\],\s]+\s+([^A-Z_]\w*)\b",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
         private static readonly Regex AsyncMethodWithoutAsyncSuffixRegex = new(
-            @"^\s*(?:public|private|protected|internal)\s+(?:\w+\s+)*async\s+[\w<>\[\],\s]+\s+(\w+)(?<!Async)\s*\(",
+            @"^\s*(?:public|private|protected|internal)?\s*(?:\w+\s+)*async\s+[\w<>\[\],\s]+\s+(\w+)(?<!Async)\s*\(",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
-        // Local variable declarations (inside methods/blocks): matches "var x =", "Type x =", optionally with "await var" or using declarations
+        // Local variable declarations (inside methods/blocks)
         private static readonly Regex LocalVariableDeclarationRegex = new(
             @"^\s*(?:var|[A-Za-z_][A-Za-z0-9_<>\[\]]*)\s+([a-zA-Z_][A-Za-z0-9_]*)\s*(?::\s*[\w<>\[\]?]+)?\s*(=|;)",
             RegexOptions.Multiline | RegexOptions.Compiled);
@@ -83,7 +83,6 @@ namespace CodeReviewRunner.Services
                     var severity = (string?)rule["severity"];
                     var id = (string?)rule["id"];
 
-                    // Forbidden pattern check (simple substring)
                     if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && text.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         var line = GetLineNumber(text, pattern);
@@ -99,7 +98,6 @@ namespace CodeReviewRunner.Services
 
                     var appliesTo = (string?)rule["applies_to"] ?? (string?)rule["appliesTo"] ?? (string?)rule["target"] ?? string.Empty;
 
-                    // Property naming convention check
                     if (appliesTo == "property_declaration")
                     {
                         foreach (var (lineText, lineNumber, propName) in FindPropertyDeclarations(text))
@@ -119,12 +117,10 @@ namespace CodeReviewRunner.Services
                         }
                     }
 
-                    // Type naming convention check
                     if (appliesTo == "type_declaration")
                     {
                         foreach (var (lineText, lineNumber, typeName) in FindTypeDeclarations(text))
                         {
-                            // PascalCase check for all types
                             if (string.IsNullOrEmpty(typeName) || !char.IsUpper(typeName[0]))
                             {
                                 issues.Add(new CodeIssue
@@ -138,7 +134,6 @@ namespace CodeReviewRunner.Services
                                 });
                             }
 
-                            // Interface 'I' prefix check
                             var match = InterfaceNameRegex.Match(lineText);
                             if (match.Success)
                             {
@@ -155,12 +150,10 @@ namespace CodeReviewRunner.Services
                         }
                     }
 
-                    // Method naming convention check
                     if (appliesTo == "method_declaration")
                     {
                         foreach (var (lineText, lineNumber, methodName, isAsync) in FindMethodDeclarations(text))
                         {
-                            // PascalCase check for methods
                             if (string.IsNullOrEmpty(methodName) || !char.IsUpper(methodName[0]))
                             {
                                 issues.Add(new CodeIssue
@@ -174,7 +167,6 @@ namespace CodeReviewRunner.Services
                                 });
                             }
 
-                            // Async suffix check
                             if (isAsync && !methodName.EndsWith("Async", StringComparison.Ordinal))
                             {
                                 issues.Add(new CodeIssue
@@ -190,12 +182,10 @@ namespace CodeReviewRunner.Services
                         }
                     }
 
-                    // Field naming convention check
                     if (appliesTo == "field_declaration")
                     {
-                        foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate) in FindFieldDeclarations(text))
+                        foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate, isPublic) in FindFieldDeclarations(text))
                         {
-                            // Constants in ALL_CAPS
                             if (isConst)
                             {
                                 var isValid = fieldName.All(c => c == '_' || char.IsDigit(c) || char.IsUpper(c));
@@ -213,7 +203,18 @@ namespace CodeReviewRunner.Services
                                 }
                             }
 
-                            // Private fields with underscore prefix and camelCase
+                            if (isPublic)
+                            {
+                                issues.Add(new CodeIssue
+                                {
+                                    FilePath = file,
+                                    Line = lineNumber,
+                                    Message = message ?? "Avoid public fields; use properties instead.",
+                                    Severity = severity ?? "warning",
+                                    RuleId = "CS010"
+                                });
+                            }
+
                             if (isPrivate && !isConst)
                             {
                                 var isValid = fieldName.StartsWith("_") && fieldName.Length > 1 && char.IsLower(fieldName[1]);
@@ -232,15 +233,13 @@ namespace CodeReviewRunner.Services
                         }
                     }
 
-                    // Local variable unused check
                     if (appliesTo == "variable_declaration" || string.Equals(id, "unused-variable", StringComparison.OrdinalIgnoreCase))
                     {
                         foreach (var (lineText, lineNumber, variableName) in FindLocalVariableDeclarations(text))
                         {
-                            // count occurrences of the variable name as a whole word
                             var usagePattern = new Regex($"\\b{Regex.Escape(variableName)}\\b", RegexOptions.Multiline);
                             var matches = usagePattern.Matches(text);
-                            if (matches.Count <= 1) // declared but never referenced
+                            if (matches.Count <= 1)
                             {
                                 issues.Add(new CodeIssue
                                 {
@@ -275,7 +274,6 @@ namespace CodeReviewRunner.Services
                     var severity = (string?)rule["severity"];
                     var id = (string?)rule["id"];
 
-                    // Forbidden pattern check (simple substring)
                     if (type == "forbidden" && !string.IsNullOrEmpty(pattern) && content.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         var line = GetLineNumber(content, pattern);
@@ -289,7 +287,6 @@ namespace CodeReviewRunner.Services
                         });
                     }
 
-                    // Parameter naming check
                     var appliesTo = (string?)rule["applies_to"] ?? (string?)rule["appliesTo"] ?? (string?)rule["target"] ?? string.Empty;
                     if (appliesTo == "parameter_declaration")
                     {
@@ -297,7 +294,6 @@ namespace CodeReviewRunner.Services
                         {
                             if (!string.IsNullOrEmpty(paramName))
                             {
-                                // Check for underscore prefix first (not allowed in parameters)
                                 if (paramName.StartsWith("_"))
                                 {
                                     issues.Add(new CodeIssue
@@ -310,7 +306,6 @@ namespace CodeReviewRunner.Services
                                         Description = $"Parameter '{paramName}' should not start with underscore."
                                     });
                                 }
-                                // Check for camelCase
                                 else if (!char.IsLower(paramName[0]))
                                 {
                                     issues.Add(new CodeIssue
@@ -327,7 +322,6 @@ namespace CodeReviewRunner.Services
                         }
                     }
 
-                    // Property naming check: enforce PascalCase for properties
                     if (appliesTo == "property_declaration")
                     {
                         foreach (var (lineText, lineNumber, propName) in FindPropertyDeclarations(content))
@@ -346,7 +340,6 @@ namespace CodeReviewRunner.Services
                         }
                     }
 
-                    // Type naming check: class/interface/struct should be PascalCase
                     if (appliesTo == "type_declaration")
                     {
                         foreach (var (lineText, lineNumber, typeName) in FindTypeDeclarations(content))
@@ -362,10 +355,22 @@ namespace CodeReviewRunner.Services
                                     RuleId = id ?? "CS001"
                                 });
                             }
+
+                            var match = InterfaceNameRegex.Match(lineText);
+                            if (match.Success)
+                            {
+                                issues.Add(new CodeIssue
+                                {
+                                    FilePath = path,
+                                    Line = lineNumber,
+                                    Message = "Interface names must start with 'I'.",
+                                    Severity = "warning",
+                                    RuleId = "CS009"
+                                });
+                            }
                         }
                     }
 
-                    // Method naming check: methods should be PascalCase
                     if (appliesTo == "method_declaration")
                     {
                         foreach (var (lineText, lineNumber, methodName, isAsync) in FindMethodDeclarations(content))
@@ -382,7 +387,6 @@ namespace CodeReviewRunner.Services
                                 });
                             }
 
-                            // Async suffix check when method is async (CS008)
                             if (isAsync && (string.Equals(id, "CS008", StringComparison.OrdinalIgnoreCase) || (message?.Contains("Async", StringComparison.OrdinalIgnoreCase) ?? false)))
                             {
                                 if (!methodName.EndsWith("Async", StringComparison.Ordinal))
@@ -400,13 +404,11 @@ namespace CodeReviewRunner.Services
                         }
                     }
 
-                    // Field rules (constants and private field naming)
                     if (appliesTo == "field_declaration")
                     {
-                        foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate) in FindFieldDeclarations(content))
+                        foreach (var (lineText, lineNumber, fieldName, isConst, isPrivate, isPublic) in FindFieldDeclarations(content))
                         {
-                            // Constants ALL_CAPS (CS005)
-                            if (isConst && (string.Equals(id, "CS005", StringComparison.OrdinalIgnoreCase) || (message?.Contains("Constants", StringComparison.OrdinalIgnoreCase) ?? false)))
+                            if (isConst)
                             {
                                 if (!(fieldName.All(c => c == '_' || char.IsDigit(c) || char.IsUpper(c))))
                                 {
@@ -416,13 +418,24 @@ namespace CodeReviewRunner.Services
                                         Line = lineNumber,
                                         Message = message ?? "Constants should be in ALL_CAPS with underscores.",
                                         Severity = severity ?? "warning",
-                                        RuleId = id ?? "CS005"
+                                        RuleId = "CS005"
                                     });
                                 }
                             }
 
-                            // Private fields underscore camelCase (CS007)
-                            if (isPrivate && !isConst && (string.Equals(id, "CS007", StringComparison.OrdinalIgnoreCase) || (message?.Contains("Private fields", StringComparison.OrdinalIgnoreCase) ?? false)))
+                            if (isPublic)
+                            {
+                                issues.Add(new CodeIssue
+                                {
+                                    FilePath = path,
+                                    Line = lineNumber,
+                                    Message = message ?? "Avoid public fields; use properties instead.",
+                                    Severity = severity ?? "warning",
+                                    RuleId = "CS010"
+                                });
+                            }
+
+                            if (isPrivate && !isConst)
                             {
                                 var valid = fieldName.StartsWith("_") && fieldName.Length > 1 && char.IsLower(fieldName[1]);
                                 if (!valid)
@@ -440,7 +453,6 @@ namespace CodeReviewRunner.Services
                         }
                     }
 
-                    // Local variable unused check from content
                     if (appliesTo == "variable_declaration" || string.Equals(id, "unused-variable", StringComparison.OrdinalIgnoreCase))
                     {
                         foreach (var (lineText, lineNumber, variableName) in FindLocalVariableDeclarations(content))
@@ -473,12 +485,10 @@ namespace CodeReviewRunner.Services
 
         private JArray GetLanguageRules(JObject rulesRoot, string language)
         {
-            // Preferred schema: { "csharp": { "rules": [ ... ] } }
             var direct = rulesRoot[language]?["rules"] as JArray;
             if (direct != null)
                 return direct;
 
-            // Fallback schema: { "rules": [ { languages: ["csharp"], ... } ] }
             var top = rulesRoot["rules"] as JArray;
             if (top != null)
             {
@@ -501,7 +511,7 @@ namespace CodeReviewRunner.Services
         {
             foreach (Match match in PropertyDeclarationRegex.Matches(content))
             {
-                var name = match.Groups[3].Value;
+                var name = match.Groups[1].Value;
                 if (string.IsNullOrEmpty(name))
                 {
                     continue;
@@ -518,7 +528,7 @@ namespace CodeReviewRunner.Services
         {
             foreach (Match match in TypeDeclarationRegex.Matches(content))
             {
-                var typeName = match.Groups[4].Value;
+                var typeName = match.Groups[2].Value;
                 if (string.IsNullOrEmpty(typeName))
                 {
                     continue;
@@ -535,18 +545,15 @@ namespace CodeReviewRunner.Services
         {
             foreach (Match match in MethodDeclarationRegex.Matches(content))
             {
-                // Calculate the line number by counting newlines before this match
                 var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
-                var methodName = match.Groups[4].Value;
-                var isAsync = !string.IsNullOrEmpty(match.Groups[3].Value);
+                var methodName = match.Groups[2].Value;
+                var isAsync = !string.IsNullOrEmpty(match.Groups[1].Value);
 
-                // Get the full line text
                 var lineStart = content.LastIndexOf('\n', match.Index) + 1;
                 var lineEnd = content.IndexOf('\n', match.Index);
                 if (lineEnd == -1) lineEnd = content.Length;
                 var lineText = content.Substring(lineStart, lineEnd - lineStart);
 
-                // Filter out non-method declarations by checking the line content
                 if (!lineText.Contains("class") &&
                     !lineText.Contains("interface") &&
                     !lineText.Contains("struct"))
@@ -561,7 +568,7 @@ namespace CodeReviewRunner.Services
             }
         }
 
-        private IEnumerable<(string lineText, int lineNumber, string fieldName, bool isConst, bool isPrivate)> FindFieldDeclarations(string content)
+        private IEnumerable<(string lineText, int lineNumber, string fieldName, bool isConst, bool isPrivate, bool isPublic)> FindFieldDeclarations(string content)
         {
             foreach (Match match in FieldDeclarationRegex.Matches(content))
             {
@@ -571,13 +578,14 @@ namespace CodeReviewRunner.Services
                 var name = match.Groups[3].Value;
                 var isConst = mods.Contains("const", StringComparison.OrdinalIgnoreCase);
                 var isPrivate = string.Equals(access, "private", StringComparison.OrdinalIgnoreCase);
+                var isPublic = string.Equals(access, "public", StringComparison.OrdinalIgnoreCase);
 
                 var lineStart = content.LastIndexOf('\n', match.Index) + 1;
                 var lineEnd = content.IndexOf('\n', match.Index);
                 if (lineEnd == -1) lineEnd = content.Length;
                 var lineText = content.Substring(lineStart, lineEnd - lineStart);
 
-                yield return (lineText, lineNumber, name, isConst, isPrivate);
+                yield return (lineText, lineNumber, name, isConst, isPrivate, isPublic);
             }
         }
 
@@ -594,7 +602,6 @@ namespace CodeReviewRunner.Services
                 var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
                 var lineText = GetLineTextAtIndex(content, match.Index);
 
-                // Best-effort filter: skip patterns that look like field declarations (have access modifiers)
                 if (Regex.IsMatch(lineText, @"\b(public|private|protected|internal)\b"))
                 {
                     continue;
@@ -628,7 +635,7 @@ namespace CodeReviewRunner.Services
             try
             {
                 var lineStart = text.LastIndexOf('\n', Math.Min(index, text.Length - 1));
-                if (lineStart < 0) lineStart = -1;  // Handle first line
+                if (lineStart < 0) lineStart = -1;
 
                 var lineEnd = index < text.Length ? text.IndexOf('\n', index) : -1;
                 if (lineEnd < 0) lineEnd = text.Length;

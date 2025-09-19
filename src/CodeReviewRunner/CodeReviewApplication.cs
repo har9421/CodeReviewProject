@@ -165,10 +165,6 @@ public class CodeReviewApplication
                     issue.Severity.ToUpper(), issue.Message, issue.FilePath, issue.Line, issue.RuleId);
             }
 
-            if (result.Issues.Count > 10)
-            {
-                _logger.LogInformation("... and {MoreCount} more issues", result.Issues.Count - 10);
-            }
         }
         else
         {
@@ -187,13 +183,13 @@ public class TestClass
 {
     public async Task doAsync()
     {
-        var unusedVariable = \"This variable is not used\";
+        var unusedVariable = ""This variable is not used"";
         await Task.Delay(10);
     }
 
     public void GoodMethod()
     {
-        Console.WriteLine(\"Hello World\");
+        Console.WriteLine(""Hello World"");
     }
 }";
 
@@ -216,8 +212,8 @@ const AnotherComponentWithVeryLongNameThatShouldTriggerWarning = () => {
 
 export default GoodComponent;";
 
-// Sample JavaScript file
-var jsContent = @"function functionWithLongNameThatExceedsTheMaximumAllowedLength() {
+        // Sample JavaScript file
+        var jsContent = @"function functionWithLongNameThatExceedsTheMaximumAllowedLength() {
     console.log('Hello World');
 }
 
@@ -228,7 +224,7 @@ function goodFunction() {
 const unusedVariable = 'This variable is not used';
 ";
 
-testFiles.Add(("test-files/sample.cs", csContent));
+        testFiles.Add(("test-files/sample.cs", csContent));
         testFiles.Add(("test-files/sample.tsx", tsxContent));
         testFiles.Add(("test-files/sample.js", jsContent));
 
