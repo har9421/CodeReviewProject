@@ -106,7 +106,8 @@ namespace CodeReviewRunner.Services
                                         Message = message ?? "Method names must be in PascalCase.",
                                         Severity = severity ?? "warning",
                                         RuleId = id ?? "CS002",
-                                        Description = $"Method '{methodName}' should start with an uppercase letter."
+                                        Description = $"Method '{methodName}' should start with an uppercase letter.",
+                                        LineText = lineText
                                     });
                                 }
 
@@ -119,7 +120,9 @@ namespace CodeReviewRunner.Services
                                         Message = message ?? "Async methods must end with 'Async' suffix.",
                                         Severity = severity ?? "warning",
                                         RuleId = "CS008",
-                                        Description = $"Async method '{methodName}' should be renamed to '{methodName}Async'."
+                                        Description = $"Async method '{methodName}' should be renamed to '{methodName}Async'.",
+                                        LineText = lineText,
+                                        Suggestion = lineText?.Replace(methodName, methodName + "Async")
                                     });
                                 }
                             }
@@ -155,7 +158,9 @@ namespace CodeReviewRunner.Services
                                             Message = message ?? "Variable is declared but never used",
                                             Severity = severity ?? "warning",
                                             RuleId = id ?? "unused-variable",
-                                            Description = $"The variable '{variableName}' is declared but never used in the code."
+                                            Description = $"The variable '{variableName}' is declared but never used in the code.",
+                                            LineText = lineText,
+                                            Suggestion = "// Remove this unused variable declaration"
                                         });
                                     }
                                 }

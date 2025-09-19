@@ -40,6 +40,9 @@ public class CodeIssue
     [JsonPropertyName("confidence")]
     public double Confidence { get; set; } = 1.0;
 
+    [JsonPropertyName("lineText")]
+    public string? LineText { get; set; }
+
     [JsonPropertyName("tags")]
     public List<string> Tags { get; set; } = new();
 }

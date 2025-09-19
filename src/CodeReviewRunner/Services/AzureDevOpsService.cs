@@ -297,14 +297,80 @@ public class AzureDevOpsService : IAzureDevOpsService
                 }
             }
 
-            var contentText = $"{issue.Severity.ToUpper()}: {issue.Message} (rule {issue.RuleId})";
+            var icon = issue.Severity.ToLower() switch
+            {
+                "error" => "❌",
+                "warning" => "⚠️",
+                "info" => "ℹ️",
+                _ => "⚡"
+            };
+
+            var colorCode = issue.Severity.ToLower() switch
+            {
+                "error" => "#D4232C",
+                "warning" => "#FFC400",
+                "info" => "#0078D4",
+                _ => "#888888"
+            };
+
+            // Get code suggestion based on rule
+            var suggestion = GetCodeSuggestion(issue);
+
+            // Get documentation link based on rule
+            var docLink = GetDocumentationLink(issue.RuleId);
+
+            // Build the comment content with rich formatting
+            var contentBuilder = new System.Text.StringBuilder();
+
+            // Header with severity and rule info
+            contentBuilder.AppendLine($"{icon} **{issue.Severity.ToUpper()}**: {issue.Message} (rule `{issue.RuleId}`)  ");
+
+            // Description in a quote block if available
+            if (!string.IsNullOrEmpty(issue.Description))
+            {
+                contentBuilder.AppendLine($"> {issue.Description}  ");
+                contentBuilder.AppendLine();
+            }
+
+            // Add code block with the problematic code if available
+            if (!string.IsNullOrEmpty(issue.LineText))
+            {
+                contentBuilder.AppendLine("```csharp");
+                contentBuilder.AppendLine(issue.LineText.Trim());
+                contentBuilder.AppendLine("```");
+            }
+
+            // Add suggestion if available
+            if (!string.IsNullOrEmpty(suggestion))
+            {
+                contentBuilder.AppendLine();
+                contentBuilder.AppendLine("**Suggestion:**");
+                contentBuilder.AppendLine("```csharp");
+                contentBuilder.AppendLine(suggestion);
+                contentBuilder.AppendLine("```");
+            }
+
+            // Add help section with documentation link if available
+            if (!string.IsNullOrEmpty(docLink))
+            {
+                contentBuilder.AppendLine();
+                contentBuilder.AppendLine("**Learn More:**");
+                contentBuilder.AppendLine($"📚 [Coding standards documentation]({docLink})");
+            }
+
+            // Add visual separator with color coding
+            contentBuilder.AppendLine();
+            contentBuilder.AppendLine($"<div style='border-left: 4px solid {colorCode}; padding-left: 8px; margin-top: 8px;'></div>");
+
+            var contentText = contentBuilder.ToString();
+
             var body = new
             {
                 comments = new[] {
                     new {
                         parentCommentId = 0,
                         content = contentText,
-                        commentType = "text"
+                        commentType = "markdown"
                     }
                 },
                 status = "active",
@@ -759,68 +825,104 @@ public class AzureDevOpsService : IAzureDevOpsService
             }
             return paths;
         }
+
+        private string GetCodeSuggestion(CodeIssue issue)
+    {
+        if (!string.IsNullOrEmpty(issue.Suggestion))
+            return issue.Suggestion;
+
+        return issue.RuleId switch
+        {
+            "CS008" => issue.LineText?.Replace(issue.Description?.Split("'")[1] ?? "",
+                                             issue.Description?.Split("'")[3] ?? "") ?? "",
+            "unused-variable" => "// Remove unused variable declaration",
+            "CS001" => issue.LineText?.Replace(issue.Description?.Split("'")[1] ?? "",
+                                             char.ToUpper(issue.Description?.Split("'")[1][0] ?? 'X') +
+                                             issue.Description?.Split("'")[1].Substring(1) ?? "") ?? "",
+            _ => ""
+        };
+    }
+
+    private string GetDocumentationLink(string ruleId)
+    {
+        var baseUrl = "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/";
+
+        return ruleId switch
+        {
+            "CS008" => $"{baseUrl}async-methods-must-end-with-async",
+            "unused-variable" => $"{baseUrl}remove-unused-variables",
+            "CS001" => $"{baseUrl}pascal-case-for-type-names",
+            "CS002" => $"{baseUrl}pascal-case-for-method-names",
+            "CS004" => $"{baseUrl}pascal-case-for-property-names",
+            "CS005" => $"{baseUrl}constants-must-be-uppercase",
+            "CS007" => $"{baseUrl}prefix-private-fields-with-underscore",
+            _ => ""
+        };
+    }
+}
+}
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Iteration fallback failed");
-            return paths;
+return paths;
         }
     }
     private async Task<object?> GetPullRequestDetailsAsync(string organization, string project, string repositoryId, string pullRequestId, CancellationToken cancellationToken)
+{
+    try
     {
-        try
+        var url = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}?api-version=7.0";
+        _logger.LogInformation("Fetching pull request details: {Url}", url);
+
+        var response = await _httpClient.GetAsync(url, cancellationToken);
+        if (response.IsSuccessStatusCode)
         {
-            var url = $"{organization.TrimEnd('/')}/{project}/_apis/git/repositories/{repositoryId}/pullRequests/{pullRequestId}?api-version=7.0";
-            _logger.LogInformation("Fetching pull request details: {Url}", url);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = System.Text.Json.JsonDocument.Parse(content);
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync(cancellationToken);
-                using var doc = System.Text.Json.JsonDocument.Parse(content);
+            _logger.LogInformation("✅ Successfully fetched pull request details");
+            _logger.LogInformation("PR Status: {Status}", doc.RootElement.GetProperty("status").GetString());
+            _logger.LogInformation("Source Branch: {SourceBranch}", doc.RootElement.GetProperty("sourceRefName").GetString());
+            _logger.LogInformation("Target Branch: {TargetBranch}", doc.RootElement.GetProperty("targetRefName").GetString());
 
-                _logger.LogInformation("✅ Successfully fetched pull request details");
-                _logger.LogInformation("PR Status: {Status}", doc.RootElement.GetProperty("status").GetString());
-                _logger.LogInformation("Source Branch: {SourceBranch}", doc.RootElement.GetProperty("sourceRefName").GetString());
-                _logger.LogInformation("Target Branch: {TargetBranch}", doc.RootElement.GetProperty("targetRefName").GetString());
-
-                return doc.RootElement;
-            }
-            else
-            {
-                _logger.LogError("Failed to fetch pull request details: {StatusCode}", response.StatusCode);
-                return null;
-            }
+            return doc.RootElement;
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogError(ex, "Exception fetching pull request details");
+            _logger.LogError("Failed to fetch pull request details: {StatusCode}", response.StatusCode);
             return null;
         }
     }
-
-    private static string NormalizeForCompare(string repoPath, string fullPath)
+    catch (Exception ex)
     {
-        if (string.IsNullOrEmpty(fullPath)) return string.Empty;
-
-        // Normalize path separators to forward slash
-        var normalized = fullPath.Replace('\\', '/').TrimStart('/');
-
-        // Handle both with and without 'Services/' prefix
-        if (normalized.StartsWith("Services/", StringComparison.OrdinalIgnoreCase))
-        {
-            normalized = normalized.Substring("Services/".Length);
-        }
-
-        // If we have a repo path, try to make the path relative to it
-        if (!string.IsNullOrEmpty(repoPath))
-        {
-            var normalizedRepoPath = repoPath.Replace('\\', '/').TrimStart('/');
-            if (normalized.StartsWith(normalizedRepoPath, StringComparison.OrdinalIgnoreCase))
-            {
-                normalized = normalized.Substring(normalizedRepoPath.Length);
-            }
-        }
-
-        return normalized.Trim('/');
+        _logger.LogError(ex, "Exception fetching pull request details");
+        return null;
     }
+}
+
+private static string NormalizeForCompare(string repoPath, string fullPath)
+{
+    if (string.IsNullOrEmpty(fullPath)) return string.Empty;
+
+    // Normalize path separators to forward slash
+    var normalized = fullPath.Replace('\\', '/').TrimStart('/');
+
+    // Handle both with and without 'Services/' prefix
+    if (normalized.StartsWith("Services/", StringComparison.OrdinalIgnoreCase))
+    {
+        normalized = normalized.Substring("Services/".Length);
+    }
+
+    // If we have a repo path, try to make the path relative to it
+    if (!string.IsNullOrEmpty(repoPath))
+    {
+        var normalizedRepoPath = repoPath.Replace('\\', '/').TrimStart('/');
+        if (normalized.StartsWith(normalizedRepoPath, StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized.Substring(normalizedRepoPath.Length);
+        }
+    }
+
+    return normalized.Trim('/');
+}
 }
