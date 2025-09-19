@@ -274,7 +274,7 @@ public class AzureDevOpsService : IAzureDevOpsService
 
             if (allowedSet != null)
             {
-                var normalizedIssuePath = NormalizeForCompare(repositoryPath, Path.Combine(repositoryPath, relativePath.TrimStart('/')));
+                var normalizedIssuePath = relativePath.TrimStart('/').Replace('\\', '/');
                 _logger.LogInformation("Checking if file is in PR changes: {NormalizedPath}", normalizedIssuePath);
                 if (!allowedSet.Contains(normalizedIssuePath))
                 {
