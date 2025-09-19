@@ -44,7 +44,10 @@ namespace CodeReviewRunner.Services
             @"^\s*(?:public|private|protected|internal)\s+(?:\w+\s+)*async\s+[\w<>\[\],\s]+\s+(\w+)(?<!Async)\s*\(",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
-
+        // Local variable declarations (inside methods/blocks): matches "var x =", "Type x =", optionally with "await var" or using declarations
+        private static readonly Regex LocalVariableDeclarationRegex = new(
+            @"^\s*(?:var|[A-Za-z_][A-Za-z0-9_<>\[\]]*)\s+([a-zA-Z_][A-Za-z0-9_]*)\s*(?::\s*[\w<>\[\]?]+)?\s*(=|;)",
+            RegexOptions.Multiline | RegexOptions.Compiled);
 
         public List<CodeIssue> Analyze(string repoPath, JObject rules, IEnumerable<string>? limitToFiles = null)
         {
@@ -95,9 +98,6 @@ namespace CodeReviewRunner.Services
                     }
 
                     var appliesTo = (string?)rule["applies_to"] ?? (string?)rule["appliesTo"] ?? (string?)rule["target"] ?? string.Empty;
-                    var ruleType = (string?)rule["type"];
-
-                    // NOTE: Parameter naming check has been moved to AnalyzeFromContent method
 
                     // Property naming convention check
                     if (appliesTo == "property_declaration")
@@ -228,6 +228,28 @@ namespace CodeReviewRunner.Services
                                         RuleId = id ?? "CS007"
                                     });
                                 }
+                            }
+                        }
+                    }
+
+                    // Local variable unused check
+                    if (appliesTo == "variable_declaration" || string.Equals(id, "unused-variable", StringComparison.OrdinalIgnoreCase))
+                    {
+                        foreach (var (lineText, lineNumber, variableName) in FindLocalVariableDeclarations(text))
+                        {
+                            // count occurrences of the variable name as a whole word
+                            var usagePattern = new Regex($"\\b{Regex.Escape(variableName)}\\b", RegexOptions.Multiline);
+                            var matches = usagePattern.Matches(text);
+                            if (matches.Count <= 1) // declared but never referenced
+                            {
+                                issues.Add(new CodeIssue
+                                {
+                                    FilePath = file,
+                                    Line = lineNumber,
+                                    Message = message ?? "Unused variable detected",
+                                    Severity = severity ?? "warning",
+                                    RuleId = id ?? "unused-variable"
+                                });
                             }
                         }
                     }
@@ -417,6 +439,27 @@ namespace CodeReviewRunner.Services
                             }
                         }
                     }
+
+                    // Local variable unused check from content
+                    if (appliesTo == "variable_declaration" || string.Equals(id, "unused-variable", StringComparison.OrdinalIgnoreCase))
+                    {
+                        foreach (var (lineText, lineNumber, variableName) in FindLocalVariableDeclarations(content))
+                        {
+                            var usagePattern = new Regex($"\\b{Regex.Escape(variableName)}\\b", RegexOptions.Multiline);
+                            var matches = usagePattern.Matches(content);
+                            if (matches.Count <= 1)
+                            {
+                                issues.Add(new CodeIssue
+                                {
+                                    FilePath = path,
+                                    Line = lineNumber,
+                                    Message = message ?? "Unused variable detected",
+                                    Severity = severity ?? "warning",
+                                    RuleId = id ?? "unused-variable"
+                                });
+                            }
+                        }
+                    }
                 }
             }
             return issues;
@@ -535,6 +578,29 @@ namespace CodeReviewRunner.Services
                 var lineText = content.Substring(lineStart, lineEnd - lineStart);
 
                 yield return (lineText, lineNumber, name, isConst, isPrivate);
+            }
+        }
+
+        private IEnumerable<(string lineText, int lineNumber, string variableName)> FindLocalVariableDeclarations(string content)
+        {
+            foreach (Match match in LocalVariableDeclarationRegex.Matches(content))
+            {
+                var varName = match.Groups[1].Value;
+                if (string.IsNullOrWhiteSpace(varName))
+                {
+                    continue;
+                }
+
+                var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
+                var lineText = GetLineTextAtIndex(content, match.Index);
+
+                // Best-effort filter: skip patterns that look like field declarations (have access modifiers)
+                if (Regex.IsMatch(lineText, @"\b(public|private|protected|internal)\b"))
+                {
+                    continue;
+                }
+
+                yield return (lineText, lineNumber, varName);
             }
         }
 
