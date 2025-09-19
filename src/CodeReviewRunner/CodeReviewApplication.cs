@@ -111,7 +111,8 @@ public class CodeReviewApplication
             try
             {
                 await _azureDevOpsService.PostCommentsAsync(
-                    orgUrl, project, repoId, prId, repoPath, distinctIssues);
+                    orgUrl, project, repoId, prId, repoPath, distinctIssues,
+                    allowedFilePaths: result.RepoChangedPaths);
                 _logger.LogInformation("Posted {CommentCount} comments to Azure DevOps", distinctIssues.Count);
             }
             catch (Exception ex)
@@ -184,22 +185,15 @@ public class CodeReviewApplication
 
 public class TestClass
 {
-    public void MethodWithLongNameThatExceedsTheMaximumAllowedLength()
+    public async Task doAsync()
     {
-        // This method name is too long
-        Console.WriteLine(""Hello World"");
+        var unusedVariable = \"This variable is not used\";
+        await Task.Delay(10);
     }
-    
+
     public void GoodMethod()
     {
-        // This method name is fine
-        Console.WriteLine(""Hello World"");
-    }
-    
-    public void AnotherMethodWithVeryLongNameThatShouldTriggerWarning()
-    {
-        // Another long method name
-        var unusedVariable = ""This variable is not used"";
+        Console.WriteLine(\"Hello World\");
     }
 }";
 
@@ -212,33 +206,29 @@ const ComponentWithLongNameThatExceedsTheMaximumAllowedLength = () => {
 };
 
 const GoodComponent = () => {
-    // This component name is fine
     return <div>Hello World</div>;
 };
 
 const AnotherComponentWithVeryLongNameThatShouldTriggerWarning = () => {
-    // Another long component name
     const unusedVariable = 'This variable is not used';
     return <div>Test</div>;
 };
 
 export default GoodComponent;";
 
-        // Sample JavaScript file
-        var jsContent = @"function functionWithLongNameThatExceedsTheMaximumAllowedLength() {
-    // This function name is too long
+// Sample JavaScript file
+var jsContent = @"function functionWithLongNameThatExceedsTheMaximumAllowedLength() {
     console.log('Hello World');
 }
 
 function goodFunction() {
-    // This function name is fine
     console.log('Hello World');
 }
 
 const unusedVariable = 'This variable is not used';
 ";
 
-        testFiles.Add(("test-files/sample.cs", csContent));
+testFiles.Add(("test-files/sample.cs", csContent));
         testFiles.Add(("test-files/sample.tsx", tsxContent));
         testFiles.Add(("test-files/sample.js", jsContent));
 
