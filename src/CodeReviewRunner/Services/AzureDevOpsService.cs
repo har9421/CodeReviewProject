@@ -598,8 +598,14 @@ public class AzureDevOpsService : IAzureDevOpsService
                         {
                             if (!string.IsNullOrWhiteSpace(candidate))
                             {
-                                changedPaths.Add(candidate);
-                                addedThisPage++;
+                                // Filter by supported extensions early
+                                var isAnalyzableFile = _options.Analysis.SupportedFileExtensions.Any(ext =>
+                                    candidate.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+                                if (isAnalyzableFile)
+                                {
+                                    changedPaths.Add(candidate);
+                                    addedThisPage++;
+                                }
                             }
                         }
                     }

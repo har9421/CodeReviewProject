@@ -84,6 +84,9 @@ public class CodeReviewService : ICodeReviewService
                 return result;
             }
 
+            // Populate repo-changed paths to restrict commenting
+            result.RepoChangedPaths = supportedFiles.Select(f => f.path.Replace('\\', '/').TrimStart('/')).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
             // Analyze files
             result.Issues = await _analysisService.AnalyzeFilesAsync(rulesJson, supportedFiles, cancellationToken);
 

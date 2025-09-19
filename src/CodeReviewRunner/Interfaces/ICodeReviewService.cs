@@ -29,4 +29,7 @@ public class CodeReviewResult
     public int TotalIssues => Issues.Count;
     public int ErrorCount => Issues.Count(i => i.Severity.Equals("error", StringComparison.OrdinalIgnoreCase));
     public int WarningCount => Issues.Count(i => i.Severity.Equals("warning", StringComparison.OrdinalIgnoreCase));
+
+    // New: repo-relative changed file paths to gate comment posting
+    public List<string> RepoChangedPaths { get; set; } = new();
 }
