@@ -1,0 +1,25 @@
+{
+  "name": "codereview-bot-extension",
+  "version": "1.0.0",
+  "description": "Azure DevOps extension for Intelligent C# Code Review Bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "azure-pipelines-task-lib": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "azure-devops",
+    "code-review",
+    "csharp",
+    "ai",
+    "bot"
+  ],
+  "author": "Your Publisher",
+  "license": "MIT"
+}

@@ -1,4 +1,4 @@
-# Intelligent C# Code Review Bot
+# Intelligent C# Code Review Bot for Azure DevOps
 
 An intelligent, AI-powered code review bot that installs directly into your Azure DevOps organization as an extension. The bot automatically reviews C# .NET Core code in pull requests and provides intelligent, contextual feedback.
 

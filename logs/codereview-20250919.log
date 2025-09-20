@@ -1,3 +1,0 @@
-2025-09-19 23:28:22.544 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
-2025-09-19 23:28:22.638 +05:30 [ERR] Invalid arguments. Expected: <repoPath> <rulesUrl> <prId> <orgUrl> <project> <repoId>
-2025-09-19 23:28:22.638 +05:30 [INF] For local testing: dotnet run test <rulesUrl> test <orgUrl> <project> <repoId>
