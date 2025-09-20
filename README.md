@@ -20,36 +20,29 @@ After installation, configure webhooks for your project:
 .\configure-webhook.ps1 -OrganizationUrl "https://dev.azure.com/yourorg" -ProjectName "YourProject" -PersonalAccessToken "your-pat"
 ```
 
-### 3. Set Up Coding Standards
+### 3. Configure Coding Standards
 
-Create a JSON file with your coding standards and host it at a publicly accessible URL:
+The project includes a comprehensive `coding-standards.json` file with predefined rules for C# .NET Core projects. You can:
 
-```json
-{
-  "rules": [
-    {
-      "id": "method-naming",
-      "severity": "warning",
-      "message": "Method names should be in PascalCase",
-      "languages": ["csharp"],
-      "applies_to": "method_declaration"
-    },
-    {
-      "id": "async-naming",
-      "severity": "warning",
-      "message": "Async methods should end with 'Async' suffix",
-      "languages": ["csharp"],
-      "applies_to": "method_declaration"
-    }
-  ]
-}
-```
+- **Use the default file**: The bot will automatically use `coding-standards.json` from the project root
+- **Customize the rules**: Edit the file to match your team's specific requirements
+- **Use a remote URL**: Point to your own hosted coding standards file
+
+The included coding standards cover:
+
+- **Naming Conventions**: Methods, classes, interfaces, properties, fields, variables, constants
+- **Code Complexity**: Method/class size limits, parameter counts, nesting depth
+- **Performance**: String concatenation, memory management patterns
+- **Security**: SQL injection prevention, hardcoded secrets detection
+- **Async Patterns**: Proper async/await usage
+- **Error Handling**: Exception handling best practices
+- **Code Style**: Formatting, documentation, and consistency rules
 
 ### 4. Configure the Bot
 
 Navigate to your Azure DevOps organization settings and configure the bot:
 
-- **Coding Standards URL**: URL to your JSON rules file
+- **Coding Standards URL**: Path to your JSON rules file (default: `coding-standards.json`)
 - **AI Analysis**: Enable/disable AI-powered analysis
 - **Learning & Adaptation**: Enable/disable learning from team feedback
 - **Comment Settings**: Configure comment frequency and severity thresholds

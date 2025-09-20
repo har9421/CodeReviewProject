@@ -1,0 +1,327 @@
+{
+  "version": "1.0.0",
+  "name": "C# Coding Standards",
+  "description": "Comprehensive coding standards for C# .NET Core projects",
+  "rules": [
+    {
+      "id": "method-naming",
+      "name": "Method Naming Convention",
+      "severity": "warning",
+      "message": "Method names should be in PascalCase",
+      "languages": ["csharp"],
+      "applies_to": "method_declaration",
+      "pattern": "^[A-Z][a-zA-Z0-9]*$",
+      "category": "naming"
+    },
+    {
+      "id": "async-naming",
+      "name": "Async Method Naming",
+      "severity": "warning",
+      "message": "Async methods should end with 'Async' suffix",
+      "languages": ["csharp"],
+      "applies_to": "method_declaration",
+      "pattern": ".*Async$",
+      "category": "naming"
+    },
+    {
+      "id": "class-naming",
+      "name": "Class Naming Convention",
+      "severity": "warning",
+      "message": "Class names should be in PascalCase",
+      "languages": ["csharp"],
+      "applies_to": "class_declaration",
+      "pattern": "^[A-Z][a-zA-Z0-9]*$",
+      "category": "naming"
+    },
+    {
+      "id": "interface-naming",
+      "name": "Interface Naming Convention",
+      "severity": "warning",
+      "message": "Interface names should start with 'I' prefix",
+      "languages": ["csharp"],
+      "applies_to": "interface_declaration",
+      "pattern": "^I[A-Z][a-zA-Z0-9]*$",
+      "category": "naming"
+    },
+    {
+      "id": "property-naming",
+      "name": "Property Naming Convention",
+      "severity": "warning",
+      "message": "Property names should be in PascalCase",
+      "languages": ["csharp"],
+      "applies_to": "property_declaration",
+      "pattern": "^[A-Z][a-zA-Z0-9]*$",
+      "category": "naming"
+    },
+    {
+      "id": "field-naming",
+      "name": "Field Naming Convention",
+      "severity": "warning",
+      "message": "Private fields should start with underscore and use camelCase",
+      "languages": ["csharp"],
+      "applies_to": "field_declaration",
+      "pattern": "^_[a-z][a-zA-Z0-9]*$",
+      "category": "naming"
+    },
+    {
+      "id": "variable-naming",
+      "name": "Variable Naming Convention",
+      "severity": "warning",
+      "message": "Local variables should be in camelCase",
+      "languages": ["csharp"],
+      "applies_to": "local_variable",
+      "pattern": "^[a-z][a-zA-Z0-9]*$",
+      "category": "naming"
+    },
+    {
+      "id": "constant-naming",
+      "name": "Constant Naming Convention",
+      "severity": "warning",
+      "message": "Constants should be in PascalCase",
+      "languages": ["csharp"],
+      "applies_to": "constant_declaration",
+      "pattern": "^[A-Z][a-zA-Z0-9]*$",
+      "category": "naming"
+    },
+    {
+      "id": "no-magic-numbers",
+      "name": "No Magic Numbers",
+      "severity": "warning",
+      "message": "Avoid magic numbers, use named constants instead",
+      "languages": ["csharp"],
+      "applies_to": "literal_expression",
+      "category": "maintainability"
+    },
+    {
+      "id": "method-complexity",
+      "name": "Method Complexity",
+      "severity": "warning",
+      "message": "Methods should not exceed 20 lines of code",
+      "languages": ["csharp"],
+      "applies_to": "method_declaration",
+      "max_lines": 20,
+      "category": "complexity"
+    },
+    {
+      "id": "class-complexity",
+      "name": "Class Complexity",
+      "severity": "warning",
+      "message": "Classes should not exceed 500 lines of code",
+      "languages": ["csharp"],
+      "applies_to": "class_declaration",
+      "max_lines": 500,
+      "category": "complexity"
+    },
+    {
+      "id": "parameter-count",
+      "name": "Parameter Count",
+      "severity": "warning",
+      "message": "Methods should not have more than 5 parameters",
+      "languages": ["csharp"],
+      "applies_to": "method_declaration",
+      "max_parameters": 5,
+      "category": "complexity"
+    },
+    {
+      "id": "nested-depth",
+      "name": "Nested Depth",
+      "severity": "warning",
+      "message": "Avoid nesting more than 3 levels deep",
+      "languages": ["csharp"],
+      "applies_to": "block_statement",
+      "max_depth": 3,
+      "category": "complexity"
+    },
+    {
+      "id": "string-concatenation",
+      "name": "String Concatenation",
+      "severity": "info",
+      "message": "Use StringBuilder for string concatenation in loops",
+      "languages": ["csharp"],
+      "applies_to": "for_loop",
+      "category": "performance"
+    },
+    {
+      "id": "dispose-pattern",
+      "name": "Dispose Pattern",
+      "severity": "warning",
+      "message": "Classes implementing IDisposable should follow the dispose pattern",
+      "languages": ["csharp"],
+      "applies_to": "class_declaration",
+      "category": "memory"
+    },
+    {
+      "id": "async-void",
+      "name": "Async Void",
+      "severity": "error",
+      "message": "Avoid async void methods, use async Task instead",
+      "languages": ["csharp"],
+      "applies_to": "method_declaration",
+      "category": "async"
+    },
+    {
+      "id": "configure-await",
+      "name": "Configure Await",
+      "severity": "warning",
+      "message": "Use ConfigureAwait(false) in library code",
+      "languages": ["csharp"],
+      "applies_to": "await_expression",
+      "category": "async"
+    },
+    {
+      "id": "exception-handling",
+      "name": "Exception Handling",
+      "severity": "warning",
+      "message": "Catch specific exceptions, avoid catching System.Exception",
+      "languages": ["csharp"],
+      "applies_to": "catch_clause",
+      "category": "error-handling"
+    },
+    {
+      "id": "null-checks",
+      "name": "Null Checks",
+      "severity": "warning",
+      "message": "Perform null checks before accessing object members",
+      "languages": ["csharp"],
+      "applies_to": "member_access",
+      "category": "safety"
+    },
+    {
+      "id": "security-sql-injection",
+      "name": "SQL Injection Prevention",
+      "severity": "error",
+      "message": "Use parameterized queries to prevent SQL injection",
+      "languages": ["csharp"],
+      "applies_to": "method_call",
+      "category": "security"
+    },
+    {
+      "id": "security-hardcoded-secrets",
+      "name": "Hardcoded Secrets",
+      "severity": "error",
+      "message": "Do not hardcode secrets, passwords, or API keys",
+      "languages": ["csharp"],
+      "applies_to": "string_literal",
+      "category": "security"
+    },
+    {
+      "id": "documentation-public-members",
+      "name": "Public Member Documentation",
+      "severity": "warning",
+      "message": "Public members should have XML documentation",
+      "languages": ["csharp"],
+      "applies_to": "method_declaration",
+      "category": "documentation"
+    },
+    {
+      "id": "usings-order",
+      "name": "Using Statements Order",
+      "severity": "info",
+      "message": "System usings should come first, then third-party, then local usings",
+      "languages": ["csharp"],
+      "applies_to": "using_statement",
+      "category": "style"
+    },
+    {
+      "id": "braces-style",
+      "name": "Braces Style",
+      "severity": "info",
+      "message": "Use Allman style braces (opening brace on new line)",
+      "languages": ["csharp"],
+      "applies_to": "block_statement",
+      "category": "style"
+    },
+    {
+      "id": "indentation",
+      "name": "Indentation",
+      "severity": "info",
+      "message": "Use 4 spaces for indentation, not tabs",
+      "languages": ["csharp"],
+      "applies_to": "all",
+      "category": "style"
+    },
+    {
+      "id": "line-length",
+      "name": "Line Length",
+      "severity": "info",
+      "message": "Lines should not exceed 120 characters",
+      "languages": ["csharp"],
+      "applies_to": "all",
+      "max_length": 120,
+      "category": "style"
+    },
+    {
+      "id": "file-header",
+      "name": "File Header",
+      "severity": "info",
+      "message": "Files should have proper header comments",
+      "languages": ["csharp"],
+      "applies_to": "file",
+      "category": "documentation"
+    }
+  ],
+  "categories": {
+    "naming": {
+      "name": "Naming Conventions",
+      "description": "Rules for naming classes, methods, properties, and variables",
+      "severity": "warning"
+    },
+    "complexity": {
+      "name": "Complexity",
+      "description": "Rules for managing code complexity",
+      "severity": "warning"
+    },
+    "performance": {
+      "name": "Performance",
+      "description": "Rules for optimizing code performance",
+      "severity": "info"
+    },
+    "memory": {
+      "name": "Memory Management",
+      "description": "Rules for proper memory management",
+      "severity": "warning"
+    },
+    "async": {
+      "name": "Asynchronous Programming",
+      "description": "Rules for async/await patterns",
+      "severity": "warning"
+    },
+    "error-handling": {
+      "name": "Error Handling",
+      "description": "Rules for proper exception handling",
+      "severity": "warning"
+    },
+    "safety": {
+      "name": "Code Safety",
+      "description": "Rules for writing safe code",
+      "severity": "warning"
+    },
+    "security": {
+      "name": "Security",
+      "description": "Rules for secure coding practices",
+      "severity": "error"
+    },
+    "documentation": {
+      "name": "Documentation",
+      "description": "Rules for code documentation",
+      "severity": "info"
+    },
+    "style": {
+      "name": "Code Style",
+      "description": "Rules for consistent code formatting",
+      "severity": "info"
+    },
+    "maintainability": {
+      "name": "Maintainability",
+      "description": "Rules for writing maintainable code",
+      "severity": "warning"
+    }
+  },
+  "settings": {
+    "enable_ai_analysis": true,
+    "enable_learning": true,
+    "max_comments_per_file": 50,
+    "enable_summary": true,
+    "severity_threshold": "info"
+  }
+}

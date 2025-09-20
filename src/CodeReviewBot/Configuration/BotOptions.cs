@@ -12,6 +12,8 @@ public class BotOptions
     [Required]
     public string Version { get; set; } = "1.0.0";
 
+    public string DefaultRulesUrl { get; set; } = "coding-standards.json";
+
     [Required]
     public WebhookOptions Webhook { get; set; } = new();
 

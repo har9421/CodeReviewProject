@@ -38,8 +38,8 @@
     {
       "name": "rulesUrl",
       "type": "string",
-      "label": "Coding Standards URL",
-      "defaultValue": "",
+        "label": "Coding Standards URL",
+        "defaultValue": "coding-standards.json",
       "required": true,
       "helpMarkDown": "URL to the JSON file containing coding standards and rules"
     },

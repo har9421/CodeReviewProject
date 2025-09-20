@@ -8,7 +8,7 @@ async function run() {
         console.log('🤖 Starting Intelligent C# Code Review Bot...');
 
         // Get task inputs
-        const rulesUrl = tl.getInput('rulesUrl', true);
+        const rulesUrl = tl.getInput('rulesUrl', true) || 'coding-standards.json';
         const aiEnabled = tl.getBoolInput('aiEnabled', false);
         const aiApiKey = tl.getInput('aiApiKey', false);
         const aiModel = tl.getInput('aiModel', false);

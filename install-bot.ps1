@@ -1,4 +1,5 @@
 # Intelligent C# Code Review Bot Installation Script
+# The bot uses the included coding-standards.json file by default
 # This script helps you install the bot as an Azure DevOps extension
 
 param(
