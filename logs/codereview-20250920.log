@@ -37,3 +37,81 @@
 2025-09-20 21:22:47.599 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
 2025-09-20 21:22:47.599 +05:30 [WRN] Warnings: File not found: test-files/sample.tsx, File not found: test-files/sample.js
 2025-09-20 21:22:47.599 +05:30 [INF] No issues found
+2025-09-20 21:31:41.626 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-20 21:31:41.732 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-20 21:31:41.732 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-20 21:31:41.737 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-20 21:31:41.748 +05:30 [INF] Analyzing 1 C# files
+2025-09-20 21:31:41.749 +05:30 [INF] Found 0 C# issues
+2025-09-20 21:31:41.749 +05:30 [INF] Total analysis completed: 0 issues found
+2025-09-20 21:31:41.749 +05:30 [INF] Local analysis completed. Found 0 issues in 1 files
+2025-09-20 21:31:41.749 +05:30 [INF] Analysis completed in 13.7112ms
+2025-09-20 21:31:41.750 +05:30 [INF] Files analyzed: 1
+2025-09-20 21:31:41.750 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-20 21:31:41.750 +05:30 [WRN] Warnings: File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-20 21:31:41.750 +05:30 [INF] No issues found
+2025-09-20 21:32:03.488 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-20 21:32:03.596 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-20 21:32:03.597 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-20 21:32:03.601 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-20 21:32:03.611 +05:30 [INF] Analyzing 1 C# files
+2025-09-20 21:32:03.612 +05:30 [INF] Found 0 C# issues
+2025-09-20 21:32:03.612 +05:30 [INF] Total analysis completed: 0 issues found
+2025-09-20 21:32:03.612 +05:30 [INF] Local analysis completed. Found 0 issues in 1 files
+2025-09-20 21:32:03.612 +05:30 [INF] Analysis completed in 11.8157ms
+2025-09-20 21:32:03.613 +05:30 [INF] Files analyzed: 1
+2025-09-20 21:32:03.613 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-20 21:32:03.613 +05:30 [WRN] Warnings: File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-20 21:32:03.613 +05:30 [INF] No issues found
+2025-09-20 21:32:20.728 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-20 21:32:20.839 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-20 21:32:20.839 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-20 21:32:20.844 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-20 21:32:20.853 +05:30 [INF] Analyzing 1 C# files
+2025-09-20 21:32:20.855 +05:30 [INF] Found 0 C# issues
+2025-09-20 21:32:20.855 +05:30 [INF] Total analysis completed: 0 issues found
+2025-09-20 21:32:20.855 +05:30 [INF] Local analysis completed. Found 0 issues in 1 files
+2025-09-20 21:32:20.855 +05:30 [INF] Analysis completed in 12.4062ms
+2025-09-20 21:32:20.856 +05:30 [INF] Files analyzed: 1
+2025-09-20 21:32:20.856 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-20 21:32:20.856 +05:30 [WRN] Warnings: File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-20 21:32:20.856 +05:30 [INF] No issues found
+2025-09-20 21:32:38.901 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-20 21:32:38.998 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-20 21:32:38.998 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-20 21:32:39.002 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-20 21:32:39.011 +05:30 [INF] Analyzing 1 C# files
+2025-09-20 21:32:39.012 +05:30 [INF] Found 0 C# issues
+2025-09-20 21:32:39.012 +05:30 [INF] Total analysis completed: 0 issues found
+2025-09-20 21:32:39.012 +05:30 [INF] Local analysis completed. Found 0 issues in 1 files
+2025-09-20 21:32:39.012 +05:30 [INF] Analysis completed in 11.8493ms
+2025-09-20 21:32:39.013 +05:30 [INF] Files analyzed: 1
+2025-09-20 21:32:39.013 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-20 21:32:39.013 +05:30 [WRN] Warnings: File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-20 21:32:39.013 +05:30 [INF] No issues found
+2025-09-20 21:35:33.443 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-20 21:35:33.544 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-20 21:35:33.544 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-20 21:35:33.549 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-20 21:35:33.559 +05:30 [INF] Analyzing 1 C# files
+2025-09-20 21:35:33.560 +05:30 [INF] Found 0 C# issues
+2025-09-20 21:35:33.560 +05:30 [INF] Total analysis completed: 0 issues found
+2025-09-20 21:35:33.560 +05:30 [INF] Local analysis completed. Found 0 issues in 1 files
+2025-09-20 21:35:33.560 +05:30 [INF] Analysis completed in 12.7838ms
+2025-09-20 21:35:33.561 +05:30 [INF] Files analyzed: 1
+2025-09-20 21:35:33.561 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-20 21:35:33.561 +05:30 [WRN] Warnings: File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-20 21:35:33.561 +05:30 [INF] No issues found
+2025-09-20 21:36:15.776 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-20 21:36:15.875 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-20 21:36:15.876 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-20 21:36:15.880 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-20 21:36:15.890 +05:30 [INF] Analyzing 1 C# files
+2025-09-20 21:36:15.891 +05:30 [INF] Found 0 C# issues
+2025-09-20 21:36:15.891 +05:30 [INF] Total analysis completed: 0 issues found
+2025-09-20 21:36:15.891 +05:30 [INF] Local analysis completed. Found 0 issues in 1 files
+2025-09-20 21:36:15.891 +05:30 [INF] Analysis completed in 12.0284ms
+2025-09-20 21:36:15.892 +05:30 [INF] Files analyzed: 1
+2025-09-20 21:36:15.892 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-20 21:36:15.892 +05:30 [WRN] Warnings: File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-20 21:36:15.892 +05:30 [INF] No issues found
