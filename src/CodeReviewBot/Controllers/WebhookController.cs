@@ -1,63 +1,63 @@
-using CodeReviewBot.Services;
+using CodeReviewBot.Interfaces;
 using CodeReviewBot.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using CodeReviewBot.Configuration;
-using System.Text.Json;
+using Newtonsoft.Json.Linq;
+using System.Text;
 
 namespace CodeReviewBot.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/webhook")]
 public class WebhookController : ControllerBase
 {
     private readonly IWebhookService _webhookService;
     private readonly ILogger<WebhookController> _logger;
-    private readonly BotOptions _options;
 
-    public WebhookController(
-        IWebhookService webhookService,
-        ILogger<WebhookController> logger,
-        IOptions<BotOptions> options)
+    public WebhookController(IWebhookService webhookService, ILogger<WebhookController> logger)
     {
         _webhookService = webhookService;
         _logger = logger;
-        _options = options.Value;
     }
 
     [HttpPost]
-    public async Task<IActionResult> HandleWebhook([FromBody] AzureDevOpsWebhook payload)
+    public async Task<IActionResult> HandleWebhook()
     {
+        _logger.LogInformation("Received webhook request.");
+
+        // Read the raw request body
+        using var reader = new StreamReader(Request.Body, Encoding.UTF8);
+        var jsonContent = await reader.ReadToEndAsync();
+
+        // Get headers for validation
+        var signature = Request.Headers["X-Vss-Signature"].FirstOrDefault();
+        var eventType = Request.Headers["X-Vss-Event"].FirstOrDefault();
+
+        if (string.IsNullOrEmpty(signature) || string.IsNullOrEmpty(eventType))
+        {
+            _logger.LogWarning("Missing X-Vss-Signature or X-Vss-Event header.");
+            return Unauthorized("Missing signature or event type header.");
+        }
+
         try
         {
-            _logger.LogInformation("Received webhook: {EventType}", payload.EventType);
-
-            // Validate webhook
-            if (!IsValidWebhook(payload))
-            {
-                _logger.LogWarning("Invalid webhook received: {EventType}", payload.EventType);
-                return BadRequest("Invalid webhook");
-            }
-
-            // Process the webhook
-            var result = await _webhookService.ProcessWebhookAsync(payload);
-
-            if (result.Success)
-            {
-                _logger.LogInformation("Webhook processed successfully");
-                return Ok(new { message = "Webhook processed successfully", analysisId = result.AnalysisId });
-            }
-            else
-            {
-                _logger.LogError("Webhook processing failed: {Error}", result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
-            }
+            var webhookEvent = JObject.Parse(jsonContent);
+            await _webhookService.ProcessWebhookAsync(eventType, webhookEvent, signature);
+            return Ok();
+        }
+        catch (Newtonsoft.Json.JsonException ex)
+        {
+            _logger.LogError(ex, "Invalid JSON payload received.");
+            return BadRequest("Invalid JSON payload.");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogError(ex, "Webhook signature validation failed.");
+            return Unauthorized(ex.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing webhook");
-            return StatusCode(500, new { error = "Internal server error" });
+            _logger.LogError(ex, "Error processing webhook.");
+            return StatusCode(500, "Internal server error.");
         }
     }
 
@@ -67,60 +67,8 @@ public class WebhookController : ControllerBase
         return Ok(new
         {
             status = "healthy",
-            botName = _options.Name,
-            version = _options.Version,
-            timestamp = DateTime.UtcNow
+            timestamp = DateTime.UtcNow,
+            message = "Code Review Bot is running"
         });
-    }
-
-    [HttpPost("configure")]
-    public async Task<IActionResult> Configure([FromBody] BotConfigurationRequest request)
-    {
-        try
-        {
-            _logger.LogInformation("Received configuration request from organization: {Organization}", request.Organization);
-
-            var result = await _webhookService.ConfigureBotAsync(request);
-
-            if (result.Success)
-            {
-                return Ok(new { message = "Bot configured successfully", configurationId = result.ConfigurationId });
-            }
-            else
-            {
-                return BadRequest(new { error = result.ErrorMessage });
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error configuring bot");
-            return StatusCode(500, new { error = "Internal server error" });
-        }
-    }
-
-    private bool IsValidWebhook(AzureDevOpsWebhook payload)
-    {
-        if (payload == null)
-            return false;
-
-        if (string.IsNullOrEmpty(payload.EventType))
-            return false;
-
-        // Check if the event type is allowed
-        if (!_options.Webhook.AllowedEvents.Contains(payload.EventType))
-        {
-            _logger.LogWarning("Event type {EventType} is not in allowed list", payload.EventType);
-            return false;
-        }
-
-        // Validate pull request webhooks
-        if (payload.EventType.StartsWith("git.pullrequest."))
-        {
-            return payload.Resource != null &&
-                   !string.IsNullOrEmpty(payload.Resource.Repository?.Id) &&
-                   payload.Resource.PullRequestId > 0;
-        }
-
-        return true;
     }
 }
