@@ -277,18 +277,23 @@ namespace CodeReviewRunner.Services
 
         private IEnumerable<(string lineText, int lineNumber, string methodName, bool isAsync)> FindMethodDeclarations(string content)
         {
-            foreach (Match match in MethodDeclarationRegex.Matches(content))
+            var matches = MethodDeclarationRegex.Matches(content);
+            Console.WriteLine($"DEBUG: Found {matches.Count} method matches in content");
+
+            foreach (Match match in matches)
             {
                 var lineNumber = content.Take(match.Index).Count(c => c == '\n') + 1;
                 var methodName = match.Groups[2].Value;
                 var isAsync = !string.IsNullOrEmpty(match.Groups[1].Value);
 
                 var lineText = GetLineTextAtIndex(content, match.Index);
+                Console.WriteLine($"DEBUG: Method found - {methodName}, isAsync: {isAsync}, line: {lineNumber}");
 
                 if (!lineText.Contains("class") &&
                     !lineText.Contains("interface") &&
                     !lineText.Contains("struct"))
                 {
+                    Console.WriteLine($"DEBUG: Yielding method: {methodName}");
                     yield return (lineText, lineNumber, methodName, isAsync);
                 }
             }
