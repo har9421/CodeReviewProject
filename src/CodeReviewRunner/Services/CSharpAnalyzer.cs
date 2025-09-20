@@ -8,7 +8,7 @@ namespace CodeReviewRunner.Services
     {
         // Matches method declarations with modifiers, return type, and name
         private static readonly Regex MethodDeclarationRegex = new(
-            @"^\s*(?:public|private|protected|internal)?\s*(?:virtual\s+|override\s+|abstract\s+|new\s+|static\s+)*(async\s+)?[\w<>\[\],\s]+\s+([A-Za-z]\w*)\s*\([^)]*\)\s*(?:\{|;|$)",
+            @"^\s*(?:public|private|protected|internal)?\s*(?:virtual\s+|override\s+|abstract\s+|new\s+|static\s+)*(async\s+)?[\w<>\[\],\s]+\s+([A-Za-z]\w*)\s*\([^)]*\)",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
         // Matches type declarations (class, interface, struct, record) - allow any starting case to validate later
