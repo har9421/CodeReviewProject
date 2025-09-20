@@ -115,3 +115,29 @@
 2025-09-20 21:36:15.892 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
 2025-09-20 21:36:15.892 +05:30 [WRN] Warnings: File not found: test-files/sample.tsx, File not found: test-files/sample.js
 2025-09-20 21:36:15.892 +05:30 [INF] No issues found
+2025-09-20 21:40:25.714 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-20 21:40:25.813 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-20 21:40:25.814 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-20 21:40:25.818 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-20 21:40:25.829 +05:30 [INF] Analyzing 1 C# files
+2025-09-20 21:40:25.830 +05:30 [INF] Found 0 C# issues
+2025-09-20 21:40:25.830 +05:30 [INF] Total analysis completed: 0 issues found
+2025-09-20 21:40:25.830 +05:30 [INF] Local analysis completed. Found 0 issues in 1 files
+2025-09-20 21:40:25.830 +05:30 [INF] Analysis completed in 12.8754ms
+2025-09-20 21:40:25.831 +05:30 [INF] Files analyzed: 1
+2025-09-20 21:40:25.831 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-20 21:40:25.831 +05:30 [WRN] Warnings: File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-20 21:40:25.831 +05:30 [INF] No issues found
+2025-09-20 21:40:40.814 +05:30 [INF] Starting CodeReviewRunner Enterprise v2.0
+2025-09-20 21:40:40.912 +05:30 [INF] === RUNNING IN TEST MODE ===
+2025-09-20 21:40:40.913 +05:30 [INF] Analyzing local test files instead of Azure DevOps PR
+2025-09-20 21:40:40.917 +05:30 [INF] Starting local file analysis for 3 files
+2025-09-20 21:40:40.926 +05:30 [INF] Analyzing 1 C# files
+2025-09-20 21:40:40.927 +05:30 [INF] Found 0 C# issues
+2025-09-20 21:40:40.927 +05:30 [INF] Total analysis completed: 0 issues found
+2025-09-20 21:40:40.927 +05:30 [INF] Local analysis completed. Found 0 issues in 1 files
+2025-09-20 21:40:40.928 +05:30 [INF] Analysis completed in 11.7072ms
+2025-09-20 21:40:40.929 +05:30 [INF] Files analyzed: 1
+2025-09-20 21:40:40.929 +05:30 [INF] Total issues: 0 (Errors: 0, Warnings: 0)
+2025-09-20 21:40:40.929 +05:30 [WRN] Warnings: File not found: test-files/sample.tsx, File not found: test-files/sample.js
+2025-09-20 21:40:40.929 +05:30 [INF] No issues found
