@@ -374,9 +374,6 @@ namespace CodeReviewRunner.Services
                 // Get code suggestion based on rule
                 var suggestion = GetCodeSuggestion(issue);
 
-                // Get documentation link based on rule
-                var docLink = GetDocumentationLink(issue.RuleId);
-
                 // Build the comment content with rich formatting
                 var contentBuilder = new System.Text.StringBuilder();
 
@@ -408,13 +405,6 @@ namespace CodeReviewRunner.Services
                     contentBuilder.AppendLine("```");
                 }
 
-                // Add help section with documentation link if available
-                if (!string.IsNullOrEmpty(docLink))
-                {
-                    contentBuilder.AppendLine();
-                    contentBuilder.AppendLine("**Learn More:**");
-                    contentBuilder.AppendLine($"📚 [Coding standards documentation]({docLink})");
-                }
 
                 // Add visual separator with color coding
                 contentBuilder.AppendLine();
