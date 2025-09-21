@@ -1,0 +1,60 @@
+{
+  "name": "Code Review Bot Development",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:8.0",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "ms-vscode.powershell",
+        "ms-vscode.vscode-json",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "CodeReviewBot.sln",
+        "files.exclude": {
+          "**/bin": true,
+          "**/obj": true
+        }
+      }
+    }
+  },
+
+  "postCreateCommand": "dotnet restore && dotnet build",
+
+  "forwardPorts": [5000, 4040],
+  
+  "portsAttributes": {
+    "5000": {
+      "label": "Bot Service",
+      "onAutoForward": "notify",
+      "protocol": "http"
+    },
+    "4040": {
+      "label": "ngrok Dashboard",
+      "onAutoForward": "silent",
+      "protocol": "http"
+    }
+  },
+
+  "remoteEnv": {
+    "ASPNETCORE_ENVIRONMENT": "Development",
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1"
+  },
+
+  "mounts": [
+    "source=${localWorkspaceFolder}/logs,target=/workspaces/codereview-bot/logs,type=bind,consistency=cached"
+  ],
+
+  "postStartCommand": "echo '🚀 Code Review Bot Codespace Ready!' && echo 'Run ./start-bot.sh to start the bot'"
+}
