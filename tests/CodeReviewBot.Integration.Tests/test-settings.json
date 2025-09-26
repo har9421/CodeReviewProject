@@ -1,0 +1,15 @@
+{
+  "IntegrationTests": {
+    "Enabled": false,
+    "AzureDevOps": {
+      "OrganizationUrl": "https://dev.azure.com/yourorg",
+      "ProjectName": "testproject",
+      "RepositoryName": "testrepo",
+      "PersonalAccessToken": "your-pat-token"
+    },
+    "TestFiles": {
+      "GoodCodePath": "../../../test-files/GoodCode.cs",
+      "BadCodePath": "../../../test-files/BadCode.cs"
+    }
+  }
+}
