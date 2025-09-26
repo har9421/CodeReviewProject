@@ -17,6 +17,8 @@ public class BotOptions
     [Required]
     public WebhookOptions Webhook { get; set; } = new();
 
+    public AzureDevOpsOptions? AzureDevOps { get; set; }
+
     [Required]
     public AnalysisOptions Analysis { get; set; } = new();
 
