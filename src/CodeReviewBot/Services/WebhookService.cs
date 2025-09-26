@@ -92,7 +92,7 @@ public class WebhookService : IWebhookService
 
             if (string.IsNullOrEmpty(organizationUrl) || string.IsNullOrEmpty(projectName) || string.IsNullOrEmpty(repositoryName))
             {
-                _logger.LogError("Missing required PR information: Organization={OrganizationUrl}, Project={ProjectName}, Repository={RepositoryName}", 
+                _logger.LogError("Missing required PR information: Organization={OrganizationUrl}, Project={ProjectName}, Repository={RepositoryName}",
                     organizationUrl, projectName, repositoryName);
                 return;
             }
@@ -101,15 +101,15 @@ public class WebhookService : IWebhookService
                 pullRequestId, projectName, repositoryName);
 
             // Get personal access token from configuration
-            var personalAccessToken = Environment.GetEnvironmentVariable("AZURE_DEVOPS_PAT") ?? 
+            var personalAccessToken = Environment.GetEnvironmentVariable("AZURE_DEVOPS_PAT") ??
                                      _botOptions.AzureDevOps?.PersonalAccessToken ?? "";
-            
+
             if (string.IsNullOrEmpty(personalAccessToken))
             {
                 _logger.LogWarning("AZURE_DEVOPS_PAT environment variable not set. Code analysis will be limited.");
                 return;
             }
-            
+
             _logger.LogInformation("Using PAT for Azure DevOps API calls (length: {PatLength})", personalAccessToken.Length);
 
             // 1. Fetch PR details
@@ -140,7 +140,7 @@ public class WebhookService : IWebhookService
                 allIssues.AddRange(issues);
             }
 
-            _logger.LogInformation("Found {IssueCount} issues across {FileCount} files in PR {PullRequestId}", 
+            _logger.LogInformation("Found {IssueCount} issues across {FileCount} files in PR {PullRequestId}",
                 allIssues.Count, fileChanges.Count, pullRequestId);
 
             // 4. Post comments for issues (limit to avoid spam)
@@ -151,7 +151,7 @@ public class WebhookService : IWebhookService
             {
                 if (commentCount >= maxComments)
                 {
-                    _logger.LogInformation("Reached maximum comment limit ({MaxComments}) for PR {PullRequestId}", 
+                    _logger.LogInformation("Reached maximum comment limit ({MaxComments}) for PR {PullRequestId}",
                         maxComments, pullRequestId);
                     break;
                 }
@@ -172,7 +172,7 @@ public class WebhookService : IWebhookService
                 if (success)
                 {
                     commentCount++;
-                    _logger.LogInformation("Posted comment for issue {RuleId} in file {FilePath}:{LineNumber}", 
+                    _logger.LogInformation("Posted comment for issue {RuleId} in file {FilePath}:{LineNumber}",
                         issue.RuleId, issue.FilePath, issue.LineNumber);
                 }
                 else
@@ -207,7 +207,7 @@ public class WebhookService : IWebhookService
                 _logger.LogInformation("Posted summary comment for PR {PullRequestId}", pullRequestId);
             }
 
-            _logger.LogInformation("PR {PullRequestId} analysis completed successfully. Found {IssueCount} issues, posted {CommentCount} comments.", 
+            _logger.LogInformation("PR {PullRequestId} analysis completed successfully. Found {IssueCount} issues, posted {CommentCount} comments.",
                 pullRequestId, allIssues.Count, commentCount);
         }
         catch (Exception ex)
