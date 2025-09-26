@@ -41,6 +41,7 @@ $webhookPayload = @{
             "Content-Type" = "application/json"
         }
     }
+    resourceFilters = @()
 } | ConvertTo-Json -Depth 10
 
 try {

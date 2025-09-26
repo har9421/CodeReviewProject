@@ -24,8 +24,11 @@ builder.Services.AddSwaggerGen();
 // Configure Bot Options
 builder.Services.Configure<BotOptions>(builder.Configuration.GetSection(BotOptions.SectionName));
 
-// Register Webhook Service
+// Register Services
 builder.Services.AddScoped<IWebhookService, WebhookService>();
+builder.Services.AddScoped<IAzureDevOpsService, AzureDevOpsService>();
+builder.Services.AddScoped<ICodeAnalyzerService, CodeAnalyzerService>();
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 

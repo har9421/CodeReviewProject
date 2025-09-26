@@ -32,16 +32,32 @@ public class WebhookController : ControllerBase
         var signature = Request.Headers["X-Vss-Signature"].FirstOrDefault();
         var eventType = Request.Headers["X-Vss-Event"].FirstOrDefault();
 
-        if (string.IsNullOrEmpty(signature) || string.IsNullOrEmpty(eventType))
+        // Try to get event type from payload first (more reliable)
+        try
         {
-            _logger.LogWarning("Missing X-Vss-Signature or X-Vss-Event header.");
-            return Unauthorized("Missing signature or event type header.");
+            var tempPayload = JObject.Parse(jsonContent);
+            var payloadEventType = tempPayload["eventType"]?.ToString();
+            if (!string.IsNullOrEmpty(payloadEventType))
+            {
+                eventType = payloadEventType;
+            }
+        }
+        catch
+        {
+            _logger.LogWarning("Could not parse payload to determine event type.");
+        }
+
+        // If still no event type, return error
+        if (string.IsNullOrEmpty(eventType))
+        {
+            _logger.LogWarning("Could not determine event type from payload or headers.");
+            return BadRequest("Could not determine event type.");
         }
 
         try
         {
             var webhookEvent = JObject.Parse(jsonContent);
-            await _webhookService.ProcessWebhookAsync(eventType, webhookEvent, signature);
+            await _webhookService.ProcessWebhookAsync(eventType, webhookEvent, signature ?? "");
             return Ok();
         }
         catch (Newtonsoft.Json.JsonException ex)

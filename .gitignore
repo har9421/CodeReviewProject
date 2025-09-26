@@ -437,3 +437,12 @@ dist/
 # Bot service specific
 bot-settings.json
 *.bot
+
+# macOS system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
