@@ -1,7 +1,9 @@
 using CodeReviewBot.Application.DTOs;
 using CodeReviewBot.Application.Interfaces;
+using CodeReviewBot.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System.IO;
 
@@ -13,13 +15,16 @@ public class WebhookController : ControllerBase
 {
     private readonly IPullRequestAnalysisService _pullRequestAnalysisService;
     private readonly ILogger<WebhookController> _logger;
+    private readonly BotOptions _botOptions;
 
     public WebhookController(
         IPullRequestAnalysisService pullRequestAnalysisService,
-        ILogger<WebhookController> logger)
+        ILogger<WebhookController> logger,
+        IOptions<BotOptions> botOptions)
     {
         _pullRequestAnalysisService = pullRequestAnalysisService;
         _logger = logger;
+        _botOptions = botOptions.Value;
     }
 
     [HttpPost]
@@ -86,12 +91,12 @@ public class WebhookController : ControllerBase
                 return BadRequest($"Missing required pull request information. Organization: {organizationUrl}, Project: {projectName}, Repository: {repositoryName}");
             }
 
-            // Get personal access token from environment or configuration
-            var personalAccessToken = Environment.GetEnvironmentVariable("AZURE_DEVOPS_PAT") ?? "";
+            // Get personal access token from configuration
+            var personalAccessToken = _botOptions.AzureDevOps?.PersonalAccessToken ?? "";
 
             if (string.IsNullOrEmpty(personalAccessToken))
             {
-                _logger.LogWarning("AZURE_DEVOPS_PAT environment variable not set. Code analysis will be limited.");
+                _logger.LogWarning("PersonalAccessToken not configured in appsettings.json. Code analysis will be limited.");
                 return Ok(new { message = "PAT not configured, analysis skipped" });
             }
 

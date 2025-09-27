@@ -1,6 +1,7 @@
 using CodeReviewBot.Application.Interfaces;
 using CodeReviewBot.Application.Services;
 using CodeReviewBot.Domain.Interfaces;
+using CodeReviewBot.Infrastructure.Configuration;
 using CodeReviewBot.Infrastructure.ExternalServices;
 using Serilog;
 
@@ -34,6 +35,9 @@ builder.Services.AddSwaggerGen();
 
 // Register HttpClient
 builder.Services.AddHttpClient();
+
+// Configure options
+builder.Services.Configure<BotOptions>(builder.Configuration.GetSection(BotOptions.SectionName));
 
 // Register Application Services
 builder.Services.AddScoped<IPullRequestAnalysisService, PullRequestAnalysisService>();
