@@ -12,13 +12,13 @@ export NGROK_URL="https://ngrok.io"
 cd src/CodeReviewBot.Presentation
 
 # Start the bot
-echo "Starting bot on http://localhost:5000..."
+echo "Starting bot on http://localhost:5002..."
 dotnet run
 
 echo "✅ Bot started successfully!"
 echo ""
 echo "💡 Tips:"
-echo "- The bot is now running on http://localhost:5000"
+echo "- The bot is now running on http://localhost:5002"
 echo "- HTTPS redirection is disabled for ngrok compatibility"
-echo "- Start ngrok in another terminal: ngrok http 5000"
+echo "- Start ngrok in another terminal: ngrok http 5002"
 echo "- Use the ngrok HTTPS URL for your webhook configuration"

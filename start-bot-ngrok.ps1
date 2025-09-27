@@ -10,13 +10,13 @@ $env:NGROK_URL = "https://ngrok.io"
 Set-Location src\CodeReviewBot.Presentation
 
 # Start the bot
-Write-Host "Starting bot on http://localhost:5000..." -ForegroundColor Yellow
+Write-Host "Starting bot on http://localhost:5002..." -ForegroundColor Yellow
 dotnet run
 
 Write-Host "✅ Bot started successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "💡 Tips:" -ForegroundColor Cyan
-Write-Host "- The bot is now running on http://localhost:5000" -ForegroundColor White
+Write-Host "- The bot is now running on http://localhost:5002" -ForegroundColor White
 Write-Host "- HTTPS redirection is disabled for ngrok compatibility" -ForegroundColor White
-Write-Host "- Start ngrok in another terminal: ngrok http 5000" -ForegroundColor White
+Write-Host "- Start ngrok in another terminal: ngrok http 5002" -ForegroundColor White
 Write-Host "- Use the ngrok HTTPS URL for your webhook configuration" -ForegroundColor White

@@ -9,8 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure Kestrel to listen on all interfaces
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenAnyIP(5000); // HTTP
-    options.ListenAnyIP(5001, listenOptions => // HTTPS
+    options.ListenAnyIP(5002); // HTTP - changed from 5000 to avoid AirPlay conflict
+    options.ListenAnyIP(5003, listenOptions => // HTTPS - changed from 5001
     {
         listenOptions.UseHttps();
     });
