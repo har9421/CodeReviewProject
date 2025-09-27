@@ -44,7 +44,18 @@ public class WebhookController : ControllerBase
             var pullRequestIdStr = payload["resource"]?["pullRequestId"]?.ToString();
             var projectName = payload["resource"]?["repository"]?["project"]?["name"]?.ToString();
             var repositoryName = payload["resource"]?["repository"]?["name"]?.ToString();
-            var organizationUrl = payload["resourceContainers"]?["project"]?["baseUrl"]?.ToString();
+            
+            // Extract organization URL from the repository URL
+            var repositoryUrl = payload["resource"]?["repository"]?["url"]?.ToString();
+            var organizationUrl = "";
+            
+            if (!string.IsNullOrEmpty(repositoryUrl))
+            {
+                // Extract organization URL from repository URL
+                // Example: https://fabrikam.visualstudio.com/DefaultCollection/_apis/git/repositories/...
+                var uri = new Uri(repositoryUrl);
+                organizationUrl = $"{uri.Scheme}://{uri.Host}";
+            }
 
             if (!int.TryParse(pullRequestIdStr, out var pullRequestId))
             {
@@ -56,7 +67,11 @@ public class WebhookController : ControllerBase
             {
                 _logger.LogError("Missing required PR information: Organization={OrganizationUrl}, Project={ProjectName}, Repository={RepositoryName}",
                     organizationUrl, projectName, repositoryName);
-                return BadRequest("Missing required pull request information");
+                
+                // Log the full payload for debugging
+                _logger.LogError("Full webhook payload: {Payload}", payload.ToString());
+                
+                return BadRequest($"Missing required pull request information. Organization: {organizationUrl}, Project: {projectName}, Repository: {repositoryName}");
             }
 
             // Get personal access token from environment or configuration
@@ -114,5 +129,40 @@ public class WebhookController : ControllerBase
             timestamp = DateTime.UtcNow,
             message = "Code Review Bot is running"
         });
+    }
+
+    [HttpPost("test")]
+    public IActionResult TestWebhook([FromBody] JObject payload)
+    {
+        try
+        {
+            _logger.LogInformation("Test webhook received payload: {Payload}", payload.ToString());
+            
+            var eventType = payload["eventType"]?.ToString();
+            var pullRequestIdStr = payload["resource"]?["pullRequestId"]?.ToString();
+            var projectName = payload["resource"]?["repository"]?["project"]?["name"]?.ToString();
+            var repositoryName = payload["resource"]?["repository"]?["name"]?.ToString();
+            var repositoryUrl = payload["resource"]?["repository"]?["url"]?.ToString();
+            
+            return Ok(new
+            {
+                message = "Test webhook received successfully",
+                extracted = new
+                {
+                    eventType,
+                    pullRequestId = pullRequestIdStr,
+                    projectName,
+                    repositoryName,
+                    repositoryUrl,
+                    organizationUrl = !string.IsNullOrEmpty(repositoryUrl) ? new Uri(repositoryUrl).GetLeftPart(UriPartial.Authority) : "Could not extract"
+                },
+                timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in test webhook");
+            return StatusCode(500, new { error = ex.Message });
+        }
     }
 }
