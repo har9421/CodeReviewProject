@@ -3,6 +3,7 @@ using CodeReviewBot.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using System.IO;
 
 namespace CodeReviewBot.Presentation.Controllers;
 
@@ -22,10 +23,21 @@ public class WebhookController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> HandleWebhook([FromBody] JObject payload)
+    public async Task<IActionResult> HandleWebhook()
     {
         try
         {
+            // Read the request body manually to avoid model binding issues
+            using var reader = new StreamReader(Request.Body);
+            var requestBody = await reader.ReadToEndAsync();
+
+            if (string.IsNullOrEmpty(requestBody))
+            {
+                _logger.LogWarning("Received empty webhook payload");
+                return BadRequest("Empty payload");
+            }
+
+            var payload = JObject.Parse(requestBody);
             var eventType = payload["eventType"]?.ToString();
             _logger.LogInformation("Received webhook: {EventType}", eventType);
 
@@ -44,11 +56,11 @@ public class WebhookController : ControllerBase
             var pullRequestIdStr = payload["resource"]?["pullRequestId"]?.ToString();
             var projectName = payload["resource"]?["repository"]?["project"]?["name"]?.ToString();
             var repositoryName = payload["resource"]?["repository"]?["name"]?.ToString();
-            
+
             // Extract organization URL from the repository URL
             var repositoryUrl = payload["resource"]?["repository"]?["url"]?.ToString();
             var organizationUrl = "";
-            
+
             if (!string.IsNullOrEmpty(repositoryUrl))
             {
                 // Extract organization URL from repository URL
@@ -67,10 +79,10 @@ public class WebhookController : ControllerBase
             {
                 _logger.LogError("Missing required PR information: Organization={OrganizationUrl}, Project={ProjectName}, Repository={RepositoryName}",
                     organizationUrl, projectName, repositoryName);
-                
+
                 // Log the full payload for debugging
                 _logger.LogError("Full webhook payload: {Payload}", payload.ToString());
-                
+
                 return BadRequest($"Missing required pull request information. Organization: {organizationUrl}, Project: {projectName}, Repository: {repositoryName}");
             }
 
@@ -137,13 +149,13 @@ public class WebhookController : ControllerBase
         try
         {
             _logger.LogInformation("Test webhook received payload: {Payload}", payload.ToString());
-            
+
             var eventType = payload["eventType"]?.ToString();
             var pullRequestIdStr = payload["resource"]?["pullRequestId"]?.ToString();
             var projectName = payload["resource"]?["repository"]?["project"]?["name"]?.ToString();
             var repositoryName = payload["resource"]?["repository"]?["name"]?.ToString();
             var repositoryUrl = payload["resource"]?["repository"]?["url"]?.ToString();
-            
+
             return Ok(new
             {
                 message = "Test webhook received successfully",
