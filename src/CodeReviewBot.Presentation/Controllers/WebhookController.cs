@@ -91,12 +91,12 @@ public class WebhookController : ControllerBase
                 return BadRequest($"Missing required pull request information. Organization: {organizationUrl}, Project: {projectName}, Repository: {repositoryName}");
             }
 
-            // Get personal access token from configuration
-            var personalAccessToken = _botOptions.AzureDevOps?.PersonalAccessToken ?? "";
+            // Get personal access token from environment variable
+            var personalAccessToken = Environment.GetEnvironmentVariable("AZURE_DEVOPS_PAT") ?? "";
 
             if (string.IsNullOrEmpty(personalAccessToken))
             {
-                _logger.LogWarning("PersonalAccessToken not configured in appsettings.json. Code analysis will be limited.");
+                _logger.LogWarning("AZURE_DEVOPS_PAT environment variable not set. Code analysis will be limited.");
                 return Ok(new { message = "PAT not configured, analysis skipped" });
             }
 

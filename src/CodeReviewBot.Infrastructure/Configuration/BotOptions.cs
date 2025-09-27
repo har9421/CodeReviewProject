@@ -57,8 +57,6 @@ public class AzureDevOpsOptions
 
     [Range(1, 60)]
     public int RetryDelaySeconds { get; set; } = 2;
-
-    public string? PersonalAccessToken { get; set; }
 }
 
 public class AnalysisOptions

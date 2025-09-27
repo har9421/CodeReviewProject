@@ -1,107 +1,116 @@
 # Configure Personal Access Token (PAT)
 
-## 🔧 **Easy PAT Configuration**
+## 🔧 **PAT Configuration via Environment Variables**
 
-Your bot now reads the Personal Access Token from the `appsettings.json` configuration file instead of requiring environment variables.
+Your bot reads the Personal Access Token from the `AZURE_DEVOPS_PAT` environment variable for secure configuration.
 
 ## 📝 **How to Configure PAT**
 
-### **1. Edit appsettings.json**
-
-Open `/src/CodeReviewBot.Presentation/appsettings.json` and find the `Bot.AzureDevOps.PersonalAccessToken` field:
-
-```json
-{
-  "Bot": {
-    "AzureDevOps": {
-      "PersonalAccessToken": "YOUR_PAT_TOKEN_HERE"
-    }
-  }
-}
-```
-
-### **2. Create a PAT in Azure DevOps**
+### **1. Create a PAT in Azure DevOps**
 
 1. Go to: https://dev.azure.com/khUniverse/_usersSettings/tokens
 2. Click **"New Token"**
 3. Configure the token:
    - **Name**: "Code Review Bot"
    - **Expiration**: Choose appropriate duration
-   - **Scopes**: 
+   - **Scopes**:
      - ✅ **Code (read & write)**
      - ✅ **Pull Requests (read & write)**
 4. Click **"Create"**
 5. **Copy the token** (you won't see it again!)
 
-### **3. Update appsettings.json**
+### **2. Set Environment Variable**
 
-Replace `"YOUR_PAT_TOKEN_HERE"` with your actual PAT:
-
-```json
-{
-  "Bot": {
-    "AzureDevOps": {
-      "PersonalAccessToken": "your-actual-pat-token-here"
-    }
-  }
-}
-```
-
-### **4. Restart the Bot**
+#### **Option A: Using the startup script (Recommended)**
 
 ```bash
-# Stop current bot
-pkill -f "CodeReviewBot.Presentation"
+# Use the provided script that sets the PAT
+./start-bot-with-pat.sh "your-pat-token-here"
+```
 
-# Start with new configuration
+#### **Option B: Manual environment variable setup**
+
+```bash
+# Set the PAT environment variable
+export AZURE_DEVOPS_PAT="your-actual-pat-token-here"
+
+# Start the bot
 export NGROK_URL="https://ngrok.io"
 cd src/CodeReviewBot.Presentation
 dotnet run
 ```
 
+#### **Option C: Create a startup script**
+
+Create a file called `start-bot.sh`:
+
+```bash
+#!/bin/bash
+export AZURE_DEVOPS_PAT="your-pat-token-here"
+export NGROK_URL="https://ngrok.io"
+cd src/CodeReviewBot.Presentation
+dotnet run
+```
+
+Make it executable and run:
+
+```bash
+chmod +x start-bot.sh
+./start-bot.sh
+```
+
+### **3. Verify Configuration**
+
+Check if the PAT is set correctly:
+
+```bash
+echo $AZURE_DEVOPS_PAT
+```
+
 ## 🎯 **Benefits of This Approach**
 
-✅ **Easy Configuration**: No need to set environment variables  
-✅ **Version Control Safe**: Keep PAT in appsettings.Development.json  
-✅ **Multiple Environments**: Different configs for dev/staging/prod  
-✅ **Centralized Settings**: All bot configuration in one place  
+✅ **Security**: PAT is not stored in configuration files  
+✅ **Environment Isolation**: Different PATs for dev/staging/prod  
+✅ **No Version Control Risk**: PAT never accidentally committed  
+✅ **Standard Practice**: Follows .NET configuration best practices
 
 ## 🔒 **Security Best Practices**
 
 ### **For Development:**
-- Use `appsettings.Development.json` for local development
-- Add `appsettings.Development.json` to `.gitignore`
+
+- Use environment variables or `.env` files
+- Never commit PAT tokens to version control
+- Use different PATs for different environments
 
 ### **For Production:**
-- Use environment variables or Azure Key Vault
-- Never commit PAT tokens to version control
 
-## 📋 **Example Configuration**
+- Use secure secret management (Azure Key Vault, AWS Secrets Manager)
+- Set environment variables in your deployment pipeline
+- Rotate PATs regularly
 
-```json
-{
-  "Bot": {
-    "Name": "Intelligent C# Code Review Bot",
-    "Version": "1.0.0",
-    "AzureDevOps": {
-      "BaseUrl": "https://dev.azure.com",
-      "ApiVersion": "7.0",
-      "PersonalAccessToken": "your-pat-token",
-      "TimeoutSeconds": 30,
-      "RetryAttempts": 3
-    },
-    "Analysis": {
-      "MaxConcurrentFiles": 10,
-      "SupportedFileExtensions": [".cs"],
-      "MaxFileSizeKB": 1024
-    },
-    "Notifications": {
-      "EnableComments": true,
-      "MaxCommentsPerFile": 50
-    }
-  }
-}
+## 📋 **Example Environment Setup**
+
+```bash
+# Set your PAT
+export AZURE_DEVOPS_PAT="your-pat-token-here"
+
+# Set ngrok flag for proxy compatibility
+export NGROK_URL="https://ngrok.io"
+
+# Navigate to bot directory
+cd src/CodeReviewBot.Presentation
+
+# Start the bot
+dotnet run
 ```
+
+## 🛠️ **Available Startup Scripts**
+
+The project includes several startup scripts for different scenarios:
+
+- **`start-bot-with-pat.sh`**: Sets PAT and starts bot
+- **`start-bot-ngrok.sh`**: Starts bot with ngrok compatibility
+- **`test-webhook.sh`**: Tests webhook endpoints
 
 ## ✅ **Test Your Configuration**
 
@@ -112,6 +121,7 @@ curl -X POST "https://your-ngrok-url.ngrok-free.app/api/webhook/health"
 ```
 
 You should see the bot respond successfully, and when you create a pull request, the bot will:
+
 - ✅ Fetch the pull request details
 - ✅ Analyze the changed C# files
 - ✅ Post intelligent comments with findings
