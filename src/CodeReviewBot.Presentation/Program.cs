@@ -6,6 +6,16 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Kestrel to listen on all interfaces
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5000); // HTTP
+    options.ListenAnyIP(5001, listenOptions => // HTTPS
+    {
+        listenOptions.UseHttps();
+    });
+});
+
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -41,7 +51,20 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Configure forwarded headers for proxy scenarios (like ngrok)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+});
+
+// Only use HTTPS redirection if not running behind a proxy
+// When using ngrok, disable HTTPS redirection since ngrok handles HTTPS termination
+var isBehindProxy = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NGROK_URL"));
+
+if (!isBehindProxy)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 
