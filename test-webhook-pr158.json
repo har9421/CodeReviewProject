@@ -1,0 +1,25 @@
+{
+    "id": "afb63472-9a85-4362-9ded-ae609e2ce1ec",
+    "eventType": "git.pullrequest.created",
+    "publisherId": "tfs",
+    "resource": {
+        "repository": {
+            "id": "801d272d-36b5-4f23-9674-01aa63f48ce8",
+            "name": "authservice",
+            "url": "https://dev.azure.com/khUniverse/5b8147cc-d3f4-4d68-9d0b-69090c123bcd/_apis/git/repositories/801d272d-36b5-4f23-9674-01aa63f48ce8",
+            "project": {
+                "id": "5b8147cc-d3f4-4d68-9d0b-69090c123bcd",
+                "name": "sso",
+                "url": "https://dev.azure.com/khUniverse/_apis/projects/5b8147cc-d3f4-4d68-9d0b-69090c123bcd"
+            }
+        },
+        "pullRequestId": 158,
+        "status": "active",
+        "lastMergeSourceCommit": {
+            "commitId": "7e0c30910391302f934883fb4850bcee2b072c03"
+        },
+        "lastMergeTargetCommit": {
+            "commitId": "600efebaf8098e7571d33e23813ed91a78cf65bb"
+        }
+    }
+}

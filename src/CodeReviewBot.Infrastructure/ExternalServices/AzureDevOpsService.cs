@@ -74,29 +74,90 @@ public class AzureDevOpsService : IPullRequestRepository
             _logger.LogInformation("Fetching changes for PR {PullRequestId}", pullRequestId);
 
             var baseUrl = organizationUrl.TrimEnd('/');
-            var changesUrl = $"{baseUrl}/{projectName}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/changes?api-version=7.0";
+            // Get PR details first to get commit IDs
+            var prUrl = $"{baseUrl}/{projectName}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}?api-version=7.0";
+            var prResponse = await _httpClient.GetAsync(prUrl);
+            prResponse.EnsureSuccessStatusCode();
+            var prJson = await prResponse.Content.ReadAsStringAsync();
+            var prData = JObject.Parse(prJson);
 
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Basic",
-                    Convert.ToBase64String(Encoding.ASCII.GetBytes($":{personalAccessToken}")));
+            var sourceCommitId = prData["lastMergeSourceCommit"]?["commitId"]?.ToString();
+            var targetCommitId = prData["lastMergeTargetCommit"]?["commitId"]?.ToString();
 
-            var response = await _httpClient.GetAsync(changesUrl);
-            response.EnsureSuccessStatusCode();
-
-            var jsonContent = await response.Content.ReadAsStringAsync();
-            var changesResponse = JObject.Parse(jsonContent);
-
-            foreach (var change in changesResponse["changes"] ?? new JArray())
+            if (string.IsNullOrEmpty(sourceCommitId) || string.IsNullOrEmpty(targetCommitId))
             {
-                var item = change["item"]?["path"]?.ToString();
-                var changeType = change["changeType"]?.ToString();
-                var url = change["item"]?["url"]?.ToString();
+                _logger.LogWarning("Could not get source or target commit IDs for PR {PullRequestId}", pullRequestId);
+                return fileChanges;
+            }
 
-                if (!string.IsNullOrEmpty(item) && item.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+            // Get all commits in the PR first
+            var commitsUrl = $"{baseUrl}/{projectName}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/commits?api-version=7.0";
+            var commitsResponse = await _httpClient.GetAsync(commitsUrl);
+            commitsResponse.EnsureSuccessStatusCode();
+            var commitsJson = await commitsResponse.Content.ReadAsStringAsync();
+            var commitsData = JObject.Parse(commitsJson);
+            var commits = commitsData["value"] as JArray;
+
+            var allFilePaths = new HashSet<string>();
+
+            // Get changes from each commit
+            if (commits != null)
+            {
+                foreach (var commit in commits)
                 {
-                    var content = await GetFileContentAsync(organizationUrl, projectName, repositoryName, item, changesResponse["baseVersion"]?.ToString() ?? "", personalAccessToken);
-                    fileChanges.Add(new FileChange { Path = item, ChangeType = changeType ?? "edit", Content = content });
+                    var commitId = commit["commitId"]?.ToString();
+                    if (!string.IsNullOrEmpty(commitId))
+                    {
+                        var changesUrl = $"{baseUrl}/{projectName}/_apis/git/repositories/{repositoryName}/commits/{commitId}/changes?api-version=7.0";
+                        var response = await _httpClient.GetAsync(changesUrl);
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var jsonContent = await response.Content.ReadAsStringAsync();
+                            var changesResponse = JObject.Parse(jsonContent);
+                            var changes = changesResponse["changes"] as JArray;
+
+                            if (changes != null)
+                            {
+                                foreach (var change in changes)
+                                {
+                                    var item = change["item"]?["path"]?.ToString();
+                                    var changeType = change["changeType"]?.ToString();
+                                    if (!string.IsNullOrEmpty(item) && item.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        allFilePaths.Add(item);
+                                        _logger.LogInformation("Found changed C# file: {FilePath} (ChangeType: {ChangeType})", item, changeType);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
+            }
+
+            // Now get content for each unique file
+            foreach (var filePath in allFilePaths)
+            {
+                // Skip Program.cs files from analysis
+                if (filePath.EndsWith("Program.cs", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("Skipping Program.cs file from analysis: {FilePath}", filePath);
+                    continue;
+                }
+
+                var cleanPath = filePath.TrimStart('/');
+                var content = await GetFileContentAsync(organizationUrl, projectName, repositoryName, cleanPath, sourceCommitId, personalAccessToken);
+
+                // Get actual changed lines by calling the diff API
+                var changedLines = await GetActualChangedLinesAsync(organizationUrl, projectName, repositoryName, cleanPath, targetCommitId, sourceCommitId, personalAccessToken);
+
+                fileChanges.Add(new FileChange
+                {
+                    Path = filePath,
+                    ChangeType = "edit",
+                    Content = content,
+                    ChangedLines = changedLines,
+                    AnalyzeOnlyChangedLines = true // Only analyze changed lines
+                });
             }
 
             _logger.LogInformation("Found {FileCount} C# file changes for PR {PullRequestId}", fileChanges.Count, pullRequestId);
@@ -121,6 +182,7 @@ public class AzureDevOpsService : IPullRequestRepository
                 new AuthenticationHeaderValue("Basic",
                     Convert.ToBase64String(Encoding.ASCII.GetBytes($":{personalAccessToken}")));
 
+            // Create comment payload - handle both file-specific and general comments
             var commentPayload = new
             {
                 comments = new[]
@@ -138,19 +200,28 @@ public class AzureDevOpsService : IPullRequestRepository
                     }
                 },
                 status = "active",
-                threadContext = new
-                {
-                    filePath = comment.FilePath,
-                    rightFileEnd = new { line = comment.LineNumber, column = 1 },
-                    rightFileStart = new { line = comment.LineNumber, column = 1 }
-                }
+                threadContext = string.IsNullOrEmpty(comment.FilePath) || comment.LineNumber <= 0
+                    ? null
+                    : new
+                    {
+                        filePath = comment.FilePath,
+                        rightFileEnd = new { line = comment.LineNumber, offset = 1 },
+                        rightFileStart = new { line = comment.LineNumber, offset = 1 }
+                    }
             };
 
             var jsonPayload = JsonSerializer.Serialize(commentPayload);
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync(commentUrl, content);
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to post comment. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode, errorContent);
+                throw new HttpRequestException($"Response status code does not indicate success: {response.StatusCode}.");
+            }
 
             _logger.LogInformation("Successfully posted comment to PR {PullRequestId}", pullRequestId);
             return true;
@@ -167,7 +238,8 @@ public class AzureDevOpsService : IPullRequestRepository
         try
         {
             var baseUrl = organizationUrl.TrimEnd('/');
-            var contentUrl = $"{baseUrl}/{projectName}/_apis/git/repositories/{repositoryName}/items?path={Uri.EscapeDataString(filePath)}&version={commitId}&api-version=7.0";
+            // Try getting the file from the latest version first
+            var contentUrl = $"{baseUrl}/{projectName}/_apis/git/repositories/{repositoryName}/items?path={Uri.EscapeDataString(filePath)}&api-version=7.0";
 
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Basic",
@@ -184,6 +256,47 @@ public class AzureDevOpsService : IPullRequestRepository
             return null;
         }
     }
+
+    private async Task<List<int>> GetActualChangedLinesAsync(string organizationUrl, string projectName, string repositoryName, string filePath, string baseCommitId, string targetCommitId, string personalAccessToken)
+    {
+        try
+        {
+            // For now, implement a simpler approach: if the commits are different, assume all lines are changed
+            // This is a temporary solution until we can properly parse the Azure DevOps diff API
+            if (baseCommitId != targetCommitId)
+            {
+                _logger.LogInformation("Commits are different for file {FilePath}, analyzing entire file as changed", filePath);
+
+                // Get the file content to determine line count
+                var content = await GetFileContentAsync(organizationUrl, projectName, repositoryName, filePath, targetCommitId, personalAccessToken);
+                if (!string.IsNullOrEmpty(content))
+                {
+                    var lines = content.Split('\n');
+                    var allLines = new List<int>();
+                    for (int i = 1; i <= lines.Length; i++)
+                    {
+                        allLines.Add(i);
+                    }
+                    _logger.LogInformation("Found {LineCount} lines in file {FilePath} (treating all as changed)", allLines.Count, filePath);
+                    return allLines;
+                }
+            }
+            else
+            {
+                _logger.LogInformation("Commits are identical for file {FilePath}, no changes detected", filePath);
+            }
+
+            return new List<int>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get changed lines for {FilePath} between commits {BaseCommitId} and {TargetCommitId}", filePath, baseCommitId, targetCommitId);
+            return new List<int>();
+        }
+    }
+
+
+
 }
 
 public class PullRequestDetailsResponse

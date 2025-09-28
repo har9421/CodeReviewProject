@@ -8,6 +8,8 @@ public class FileChange
     public string ChangeType { get; set; } = string.Empty;
     public string? Content { get; set; }
     public string CommitId { get; set; } = string.Empty;
+    public List<int> ChangedLines { get; set; } = new();
+    public bool AnalyzeOnlyChangedLines { get; set; } = true;
 }
 
 public class FileChangeValidator : AbstractValidator<FileChange>

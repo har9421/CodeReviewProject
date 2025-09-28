@@ -69,9 +69,27 @@ public class WebhookController : ControllerBase
             if (!string.IsNullOrEmpty(repositoryUrl))
             {
                 // Extract organization URL from repository URL
-                // Example: https://fabrikam.visualstudio.com/DefaultCollection/_apis/git/repositories/...
+                // Example: https://dev.azure.com/khUniverse/5b8147cc-d3f4-4d68-9d0b-69090c123bcd/_apis/git/repositories/...
                 var uri = new Uri(repositoryUrl);
-                organizationUrl = $"{uri.Scheme}://{uri.Host}";
+                var pathSegments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+                if (pathSegments.Length >= 1)
+                {
+                    // For dev.azure.com URLs, the organization is the first path segment
+                    // For visualstudio.com URLs, it's the host
+                    if (uri.Host.Contains("dev.azure.com"))
+                    {
+                        organizationUrl = $"{uri.Scheme}://{uri.Host}/{pathSegments[0]}";
+                    }
+                    else
+                    {
+                        organizationUrl = $"{uri.Scheme}://{uri.Host}";
+                    }
+                }
+                else
+                {
+                    organizationUrl = $"{uri.Scheme}://{uri.Host}";
+                }
             }
 
             if (!int.TryParse(pullRequestIdStr, out var pullRequestId))

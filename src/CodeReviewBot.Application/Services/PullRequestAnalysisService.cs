@@ -84,7 +84,7 @@ public class PullRequestAnalysisService : IPullRequestAnalysisService
 
                 var comment = new PullRequestComment
                 {
-                    Content = $"🤖 **Code Review Bot**\n\n**{issue.Severity}**: {issue.Message}\n\n" +
+                    Content = $"**{issue.Severity}**: {issue.Message}\n\n" +
                               (!string.IsNullOrEmpty(issue.Suggestion) ? $"💡 **Suggestion**: {issue.Suggestion}\n\n" : "") +
                               $"📋 **Rule**: {issue.RuleId}",
                     FilePath = issue.FilePath,
@@ -111,29 +111,7 @@ public class PullRequestAnalysisService : IPullRequestAnalysisService
                 await Task.Delay(500);
             }
 
-            // 5. Post summary comment if there were issues
-            if (allIssues.Any())
-            {
-                var summaryComment = new PullRequestComment
-                {
-                    Content = $"🤖 **Code Review Bot Analysis Summary**\n\n" +
-                              $"Found **{allIssues.Count}** code quality issues:\n\n" +
-                              $"• **Errors**: {allIssues.Count(i => i.Severity == "Error")}\n" +
-                              $"• **Warnings**: {allIssues.Count(i => i.Severity == "Warning")}\n" +
-                              $"• **Info**: {allIssues.Count(i => i.Severity == "Info")}\n\n" +
-                              $"Files analyzed: {fileChanges.Count}\n" +
-                              $"Comments posted: {commentCount}",
-                    FilePath = "",
-                    LineNumber = 0,
-                    Severity = "Info"
-                };
-
-                await _pullRequestRepository.PostCommentAsync(
-                    request.OrganizationUrl, request.ProjectName, request.RepositoryName,
-                    request.PullRequestId, request.PersonalAccessToken, summaryComment);
-
-                _logger.LogInformation("Posted summary comment for PR {PullRequestId}", request.PullRequestId);
-            }
+            // Summary comment removed as requested
 
             return new AnalyzePullRequestResponse
             {
