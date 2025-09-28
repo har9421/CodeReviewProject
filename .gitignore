@@ -446,3 +446,18 @@ bot-settings.json
 .Trashes
 ehthumbs.db
 Thumbs.db
+# Build artifacts
+bin/
+obj/
+*.user
+*.suo
+*.cache
+
+# Logs
+logs/
+*.log
+
+# Test files
+test-webhook*.json
+test-*.sh
+test-files/
