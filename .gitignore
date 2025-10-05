@@ -461,3 +461,7 @@ logs/
 test-webhook*.json
 test-*.sh
 test-files/
+
+# Environment files
+.env
+.env.local
