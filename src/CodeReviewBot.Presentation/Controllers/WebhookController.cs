@@ -1,6 +1,6 @@
 using CodeReviewBot.Application.DTOs;
 using CodeReviewBot.Application.Interfaces;
-using CodeReviewBot.Infrastructure.Configuration;
+using CodeReviewBot.Shared.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -114,8 +114,15 @@ public class WebhookController : ControllerBase
 
             if (string.IsNullOrEmpty(personalAccessToken))
             {
-                _logger.LogWarning("AZURE_DEVOPS_PAT environment variable not set. Code analysis will be limited.");
-                return Ok(new { message = "PAT not configured, analysis skipped" });
+                _logger.LogError("AZURE_DEVOPS_PAT environment variable not set. Cannot authenticate with Azure DevOps API.");
+                return StatusCode(500, new { error = "Personal Access Token not configured. Please set AZURE_DEVOPS_PAT environment variable." });
+            }
+
+            // Basic PAT validation - Azure DevOps PATs are typically 52 characters long
+            if (personalAccessToken.Length < 20)
+            {
+                _logger.LogError("AZURE_DEVOPS_PAT appears to be invalid (too short). PAT should be at least 20 characters long.");
+                return StatusCode(500, new { error = "Invalid Personal Access Token format. Please check your AZURE_DEVOPS_PAT environment variable." });
             }
 
             var request = new AnalyzePullRequestRequest
@@ -199,5 +206,11 @@ public class WebhookController : ControllerBase
             _logger.LogError(ex, "Error in test webhook");
             return StatusCode(500, new { error = ex.Message });
         }
+    }
+
+    [HttpGet("test")]
+    public IActionResult Test()
+    {
+        return Ok(new { message = "Webhook controller is working", timestamp = DateTime.UtcNow });
     }
 }

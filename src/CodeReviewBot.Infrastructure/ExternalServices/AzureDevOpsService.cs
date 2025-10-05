@@ -30,15 +30,35 @@ public class AzureDevOpsService : IPullRequestRepository
 
             _logger.LogInformation("Making request to: {PrUrl}", prUrl);
 
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Basic",
-                    Convert.ToBase64String(Encoding.ASCII.GetBytes($":{personalAccessToken}")));
+            // Create a request message with proper authorization header
+            var request = new HttpRequestMessage(HttpMethod.Get, prUrl);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(Encoding.ASCII.GetBytes($":{personalAccessToken}")));
 
-            var response = await _httpClient.GetAsync(prUrl);
-            response.EnsureSuccessStatusCode();
+            var response = await _httpClient.SendAsync(request);
 
-            var jsonContent = await response.Content.ReadAsStringAsync();
-            var prDetails = JsonSerializer.Deserialize<PullRequestDetailsResponse>(jsonContent, new JsonSerializerOptions
+            _logger.LogInformation("Received HTTP response status: {StatusCode}", response.StatusCode);
+
+            // Log response content for debugging
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogDebug("Response content: {ResponseContent}", responseContent);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("API request failed with status {StatusCode}. Response: {ResponseContent}",
+                    response.StatusCode, responseContent);
+                return null;
+            }
+
+            // Check if response is HTML (indicates authentication issue)
+            if (responseContent.TrimStart().StartsWith("<"))
+            {
+                _logger.LogError("Received HTML response instead of JSON. This usually indicates an authentication issue. Response: {ResponseContent}",
+                    responseContent);
+                return null;
+            }
+
+            var prDetails = JsonSerializer.Deserialize<PullRequestDetailsResponse>(responseContent, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
@@ -76,8 +96,21 @@ public class AzureDevOpsService : IPullRequestRepository
             var baseUrl = organizationUrl.TrimEnd('/');
             // Get PR details first to get commit IDs
             var prUrl = $"{baseUrl}/{projectName}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}?api-version=7.0";
-            var prResponse = await _httpClient.GetAsync(prUrl);
-            prResponse.EnsureSuccessStatusCode();
+
+            var prRequest = new HttpRequestMessage(HttpMethod.Get, prUrl);
+            prRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(Encoding.ASCII.GetBytes($":{personalAccessToken}")));
+
+            var prResponse = await _httpClient.SendAsync(prRequest);
+
+            if (!prResponse.IsSuccessStatusCode)
+            {
+                var errorContent = await prResponse.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to get PR details. Status: {StatusCode}, Response: {Response}",
+                    prResponse.StatusCode, errorContent);
+                return fileChanges;
+            }
+
             var prJson = await prResponse.Content.ReadAsStringAsync();
             var prData = JObject.Parse(prJson);
 
@@ -92,8 +125,21 @@ public class AzureDevOpsService : IPullRequestRepository
 
             // Get all commits in the PR first
             var commitsUrl = $"{baseUrl}/{projectName}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/commits?api-version=7.0";
-            var commitsResponse = await _httpClient.GetAsync(commitsUrl);
-            commitsResponse.EnsureSuccessStatusCode();
+
+            var commitsRequest = new HttpRequestMessage(HttpMethod.Get, commitsUrl);
+            commitsRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(Encoding.ASCII.GetBytes($":{personalAccessToken}")));
+
+            var commitsResponse = await _httpClient.SendAsync(commitsRequest);
+
+            if (!commitsResponse.IsSuccessStatusCode)
+            {
+                var errorContent = await commitsResponse.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to get commits. Status: {StatusCode}, Response: {Response}",
+                    commitsResponse.StatusCode, errorContent);
+                return fileChanges;
+            }
+
             var commitsJson = await commitsResponse.Content.ReadAsStringAsync();
             var commitsData = JObject.Parse(commitsJson);
             var commits = commitsData["value"] as JArray;
@@ -109,7 +155,12 @@ public class AzureDevOpsService : IPullRequestRepository
                     if (!string.IsNullOrEmpty(commitId))
                     {
                         var changesUrl = $"{baseUrl}/{projectName}/_apis/git/repositories/{repositoryName}/commits/{commitId}/changes?api-version=7.0";
-                        var response = await _httpClient.GetAsync(changesUrl);
+
+                        var changesRequest = new HttpRequestMessage(HttpMethod.Get, changesUrl);
+                        changesRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic",
+                            Convert.ToBase64String(Encoding.ASCII.GetBytes($":{personalAccessToken}")));
+
+                        var response = await _httpClient.SendAsync(changesRequest);
                         if (response.IsSuccessStatusCode)
                         {
                             var jsonContent = await response.Content.ReadAsStringAsync();
@@ -178,10 +229,6 @@ public class AzureDevOpsService : IPullRequestRepository
             var baseUrl = organizationUrl.TrimEnd('/');
             var commentUrl = $"{baseUrl}/{projectName}/_apis/git/repositories/{repositoryName}/pullrequests/{pullRequestId}/threads?api-version=7.0";
 
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Basic",
-                    Convert.ToBase64String(Encoding.ASCII.GetBytes($":{personalAccessToken}")));
-
             // Create comment payload - handle both file-specific and general comments
             var commentPayload = new
             {
@@ -213,7 +260,12 @@ public class AzureDevOpsService : IPullRequestRepository
             var jsonPayload = JsonSerializer.Serialize(commentPayload);
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(commentUrl, content);
+            var request = new HttpRequestMessage(HttpMethod.Post, commentUrl);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(Encoding.ASCII.GetBytes($":{personalAccessToken}")));
+            request.Content = content;
+
+            var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -241,12 +293,19 @@ public class AzureDevOpsService : IPullRequestRepository
             // Try getting the file from the latest version first
             var contentUrl = $"{baseUrl}/{projectName}/_apis/git/repositories/{repositoryName}/items?path={Uri.EscapeDataString(filePath)}&api-version=7.0";
 
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Basic",
-                    Convert.ToBase64String(Encoding.ASCII.GetBytes($":{personalAccessToken}")));
+            var request = new HttpRequestMessage(HttpMethod.Get, contentUrl);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(Encoding.ASCII.GetBytes($":{personalAccessToken}")));
 
-            var response = await _httpClient.GetAsync(contentUrl);
-            response.EnsureSuccessStatusCode();
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to get file content. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode, errorContent);
+                return null;
+            }
 
             return await response.Content.ReadAsStringAsync();
         }

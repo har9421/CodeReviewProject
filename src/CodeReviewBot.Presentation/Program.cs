@@ -1,7 +1,7 @@
 using CodeReviewBot.Application.Interfaces;
 using CodeReviewBot.Application.Services;
 using CodeReviewBot.Domain.Interfaces;
-using CodeReviewBot.Infrastructure.Configuration;
+using CodeReviewBot.Shared.Configuration;
 using CodeReviewBot.Infrastructure.ExternalServices;
 using Serilog;
 
@@ -40,11 +40,16 @@ builder.Services.AddHttpClient();
 builder.Services.Configure<BotOptions>(builder.Configuration.GetSection(BotOptions.SectionName));
 
 // Register Application Services
-builder.Services.AddScoped<IPullRequestAnalysisService, PullRequestAnalysisService>();
+builder.Services.AddScoped<IPullRequestAnalysisService, IntelligentPullRequestAnalysisService>();
 
 // Register Infrastructure Services
 builder.Services.AddScoped<IPullRequestRepository, AzureDevOpsService>();
-builder.Services.AddScoped<ICodeAnalyzer, CodeAnalyzerService>();
+builder.Services.AddScoped<ICodeAnalyzer, IntelligentCodeAnalyzerService>();
+builder.Services.AddScoped<ILearningService, LearningService>();
+builder.Services.AddScoped<IPerformanceMonitoringService, PerformanceMonitoringService>();
+builder.Services.AddScoped<GitHubDataIngestionService>();
+builder.Services.AddScoped<BatchProcessingService>();
+builder.Services.AddScoped<DataPreprocessingService>();
 
 var app = builder.Build();
 

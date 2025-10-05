@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace CodeReviewBot.Infrastructure.Configuration;
+namespace CodeReviewBot.Shared.Configuration;
 
 public class BotOptions
 {
@@ -24,6 +24,10 @@ public class BotOptions
 
     [Required]
     public NotificationsOptions Notifications { get; set; } = new();
+
+    public LearningOptions? Learning { get; set; }
+
+    public PerformanceOptions? Performance { get; set; }
 }
 
 public class WebhookOptions
@@ -75,6 +79,13 @@ public class AnalysisOptions
 
     [Range(1, 10000)]
     public int MaxFileSizeKB { get; set; } = 1024;
+
+    public bool EnableIntelligentFiltering { get; set; } = true;
+
+    [Range(0.0, 1.0)]
+    public double MinConfidenceThreshold { get; set; } = 0.3;
+
+    public bool EnableParallelProcessing { get; set; } = true;
 }
 
 public class NotificationsOptions
@@ -87,4 +98,49 @@ public class NotificationsOptions
 
     [Range(1, 100)]
     public int MaxCommentsPerFile { get; set; } = 50;
+
+    public bool EnableConfidenceIndicators { get; set; } = true;
+
+    public bool AdaptiveDelayEnabled { get; set; } = true;
+}
+
+public class LearningOptions
+{
+    public const string SectionName = "Learning";
+
+    public bool EnableLearning { get; set; } = true;
+
+    [Range(1, 365)]
+    public int DataRetentionDays { get; set; } = 90;
+
+    public bool AutoOptimizeRules { get; set; } = true;
+
+    public bool FeedbackCollectionEnabled { get; set; } = true;
+
+    [Range(1, 100)]
+    public int MinDataPointsForOptimization { get; set; } = 10;
+}
+
+public class PerformanceOptions
+{
+    public const string SectionName = "Performance";
+
+    public bool EnableMonitoring { get; set; } = true;
+
+    [Range(1, 168)]
+    public int MetricsRetentionHours { get; set; } = 24;
+
+    public PerformanceAlertThresholds AlertThresholds { get; set; } = new();
+}
+
+public class PerformanceAlertThresholds
+{
+    [Range(0.0, 1.0)]
+    public double HighErrorRate { get; set; } = 0.1;
+
+    [Range(1, 300)]
+    public int SlowPerformanceSeconds { get; set; } = 30;
+
+    [Range(1, 10000)]
+    public int HighMemoryUsageMB { get; set; } = 100;
 }
