@@ -1,0 +1,23 @@
+[
+  {
+    "Id": "9e5212d1-42b5-461b-9c08-1723e127fddb",
+    "PullRequestId": "164",
+    "RepositoryName": "authservice",
+    "ProjectName": "sso",
+    "AnalysisDate": "2025-10-05T09:06:58.483086Z",
+    "RuleEffectiveness": [],
+    "DeveloperFeedback": [],
+    "Metrics": {
+      "TotalFilesAnalyzed": 2,
+      "TotalIssuesFound": 0,
+      "CommentsPosted": 0,
+      "CommentsAccepted": 0,
+      "CommentsRejected": 0,
+      "AverageResponseTime": 502.331,
+      "FileTypes": [
+        ".cs"
+      ],
+      "RuleUsageCount": {}
+    }
+  }
+]
