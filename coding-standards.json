@@ -1,0 +1,182 @@
+[
+  {
+    "id": "no-console-writeline",
+    "severity": "warning",
+    "message": "Avoid using Console.WriteLine in production code",
+    "pattern": "Console\\.WriteLine\\s*\\(",
+    "suggestion": "Use proper logging framework (ILogger, Serilog, etc.) instead",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "no-magic-numbers",
+    "severity": "info",
+    "message": "Consider using named constants instead of magic numbers",
+    "pattern": "\\b\\d{3,}\\b",
+    "suggestion": "Define a named constant for this value to improve readability",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "method-too-long",
+    "severity": "warning",
+    "message": "Method is too long and should be refactored",
+    "pattern": "public\\s+\\w+\\s+\\w+\\s*\\([^)]*\\)\\s*\\{[^}]{500,}\\}",
+    "suggestion": "Break this method into smaller, more focused methods (max 20-30 lines)",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "missing-documentation",
+    "severity": "info",
+    "message": "Public methods should have XML documentation",
+    "pattern": "public\\s+\\w+\\s+\\w+\\s*\\([^)]*\\)\\s*(?!\\s*///)",
+    "suggestion": "Add XML documentation comments for this public method",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "empty-catch-block",
+    "severity": "error",
+    "message": "Empty catch block should be avoided",
+    "pattern": "catch\\s*\\([^)]*\\)\\s*\\{\\s*\\}",
+    "suggestion": "Add proper exception handling or logging in the catch block",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "hardcoded-connection-string",
+    "severity": "warning",
+    "message": "Hardcoded connection string should use configuration",
+    "pattern": "connectionString\\s*=\\s*[\"'][^\"']*[\"']",
+    "suggestion": "Move connection string to configuration (appsettings.json, environment variables)",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "async-without-await",
+    "severity": "warning",
+    "message": "Async method without await keyword",
+    "pattern": "async\\s+\\w+\\s+\\w+\\s*\\([^)]*\\)\\s*\\{[^}]*\\}(?!.*await)",
+    "suggestion": "Remove async keyword if no await is used, or add await for async operations",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "dispose-not-called",
+    "severity": "warning",
+    "message": "IDisposable resource should be disposed",
+    "pattern": "using\\s*\\([^)]*\\)\\s*\\{[^}]*\\}",
+    "suggestion": "Ensure IDisposable resources are properly disposed using 'using' statements",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "string-concatenation-in-loop",
+    "severity": "warning",
+    "message": "String concatenation in loop should use StringBuilder",
+    "pattern": "for\\s*\\([^}]*\\}\\s*\\{[^}]*\\+\\s*=",
+    "suggestion": "Use StringBuilder for string concatenation in loops for better performance",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "nullable-reference-warning",
+    "severity": "warning",
+    "message": "Potential null reference exception",
+    "pattern": "\\w+\\s*\\.\\w+\\s*(?!\\?)",
+    "suggestion": "Add null checks or use null-conditional operators (?.) to prevent NullReferenceException",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "missing-null-check",
+    "severity": "warning",
+    "message": "Missing null check before method call",
+    "pattern": "\\w+\\s*\\.\\w+\\s*\\([^)]*\\)",
+    "suggestion": "Add null check before calling methods on potentially null objects",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "hardcoded-password",
+    "severity": "error",
+    "message": "Hardcoded password or sensitive data detected",
+    "pattern": "(password|pwd|secret|key)\\s*=\\s*[\"'][^\"']*[\"']",
+    "suggestion": "Use secure configuration management for sensitive data",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "sql-injection-risk",
+    "severity": "error",
+    "message": "Potential SQL injection vulnerability",
+    "pattern": "\\$\\{[^}]+\\}|\\+\\s*[\"'][^\"']*[\"']",
+    "suggestion": "Use parameterized queries or Entity Framework to prevent SQL injection",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "todo-comment",
+    "severity": "info",
+    "message": "TODO comment found - ensure it's addressed before production",
+    "pattern": "//\\s*TODO|//\\s*FIXME|//\\s*HACK",
+    "suggestion": "Address this TODO/FIXME/HACK before merging to production",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "unused-variable",
+    "severity": "warning",
+    "message": "Unused variable detected",
+    "pattern": "(var|int|string|bool)\\s+\\w+\\s*=",
+    "suggestion": "Remove unused variables or use them in the code",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "long-line",
+    "severity": "info",
+    "message": "Line is too long (over 120 characters)",
+    "pattern": "^.{120,}$",
+    "suggestion": "Break long lines to improve readability (max 120 characters)",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "missing-using-directive",
+    "severity": "warning",
+    "message": "Common namespace might be missing using directive",
+    "pattern": "System\\.|Microsoft\\.|Newtonsoft\\.",
+    "suggestion": "Ensure proper using directives are included at the top of the file",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "exception-swallowing",
+    "severity": "warning",
+    "message": "Exception is being caught but not logged or re-thrown",
+    "pattern": "catch\\s*\\([^)]*\\)\\s*\\{[^}]*\\}",
+    "suggestion": "Log the exception or re-throw it with proper context",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "magic-string",
+    "severity": "info",
+    "message": "Consider using constants instead of magic strings",
+    "pattern": "\"[A-Z_]{3,}\"|'[A-Z_]{3,}'",
+    "suggestion": "Define string constants for repeated string literals",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  },
+  {
+    "id": "complex-conditional",
+    "severity": "warning",
+    "message": "Complex conditional expression should be simplified",
+    "pattern": "if\\s*\\([^)]{50,}\\)",
+    "suggestion": "Break complex conditions into separate boolean variables for readability",
+    "languages": ["csharp"],
+    "appliesTo": ["*.cs"]
+  }
+]
